@@ -14,7 +14,7 @@ class SSRNet(NeuralNet):
         self.batch_size = batch_size
         
  #   def __init__(self, fileName):
-       # self.load(file_name=fileName)
+        #self.load(file_name=fileName)
        
     def SSR(self) -> float:
         sum = 0
