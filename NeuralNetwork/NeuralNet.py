@@ -14,6 +14,7 @@ class ACT_FUNC(Enum):
     SOFT_PLUS = 0
     RELU = 1
     SIGMOID = 2
+    TANH = 3
 
 def running_product(list):
     sum = 0
@@ -46,31 +47,39 @@ class NeuralNet:
             return max(0,x)
 
         elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-             x = np.clip(x,-100,100)
+             x = np.clip(x,-50,50)
              return np.log( 1 + np.e ** x )
 
         elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-100,100)
+            x = np.clip(x,-50,50)
             return  1  / ( 1 + np.e ** -x )
+        elif self.FUNC is ACT_FUNC.TANH:
+            x = np.clip(x,-50,50)
+            return
     
     def activation_deriv(self, x : np.float64):
         if self.FUNC is ACT_FUNC.RELU:
             return 1 if x >= 0 else 0
 
         elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-                x = np.clip(x,-100,100)
+                x = np.clip(x,-50,50)
                 return (np.e ** x) / ( 1 + np.e ** x )
 
         elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-100,100)
+            x = np.clip(x,-50,50)
             return  ( np.e ** -x ) / ( ( 1 + np.e ** -x) ** 2 ) 
+        
+        elif self.FUNC is ACT_FUNC.TANH:
+            x = np.clip(x,-50,50)
+            return ( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x)
 
     
     def evaluate(self, inputs ):
+        values = None
         if isinstance(inputs, list):
             values = np.array(inputs, dtype=np.float64).reshape( ( len(inputs), 1) )
         else:
-           values = values.reshape( (values.size, 1) )
+           values = inputs.reshape( (inputs.size, 1) )
 
         for k in range( self.num_layers - 1 ):
               values = np.matmul( self.weights[k] , values ) + self.biases[k]
@@ -239,22 +248,22 @@ class NeuralNet:
                 self.init_paramaters(mean , SD, False,seed)
                 for j in range( num_test_iterations ):
                     self.optomize()
-                SSR_and_seed_list.append( (self.SSR(), seed) )
+                SSR_and_seed_list.append( (self.cross_entropy_cost(), seed) )
 
             SSR_and_seed_list = sorted(SSR_and_seed_list, key= lambda x: x[0], reverse=True )
             self.init_paramaters(mean, SD, seed=SSR_and_seed_list[0][1] )
             
             pat = 0
             for i in range( num_iterations ):
-                prev_cost = self.SSR()
+                prev_cost = self.cross_entropy_cost()
                 if self.debug: print(f' SSR :: {prev_cost} \nLR :: {self.learn_rate}' )
                 
                 self.optomize()
-                curr_cost = self.SSR()
+                curr_cost = self.cross_entropy_cost()
                 if curr_cost > prev_cost: 
                     pat += 1
 
-                if self.use_lr_Tuning or pat > self.lr_patience:
+                if self.use_lr_Tuning and pat > self.lr_patience:
                      self.learn_rate = max( self.learn_rate * self.lr_decrease, self.lr_min )
                      pat = 0
 

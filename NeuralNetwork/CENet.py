@@ -12,13 +12,14 @@ class CENet(NeuralNet):
         self.prev_gradient_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
         self.batch_size = batch_size
         
-   #  def __init__(self, fileName):
-       # self.load(file_name=fileName)
+    # def __init__(self, fileName):
+     #    self.load(file_name=fileName)
         
         
      def argMax(self, values, threshold : float = 0.5):
          for a in range( values.shape[0] ):
              values[a,0] = 1 if values[a,0] >= threshold else 0
+         return values
 
      def softMax(self, values):
          for a in range( values.shape[0] ):
@@ -43,8 +44,33 @@ class CENet(NeuralNet):
      def cross_entropy(self, predicted_value):
          return -np.log(predicted_value)
      
+     def cross_entropy_cost(self):
+           sum = 0
+           rand_data_points = np.random.randint(0, len(self.trainX), size=self.batch_size)
+           for i in rand_data_points:
+               outputs = self.soft_evaluate(self.trainX[i])
+               output_index = int(self.trainY[i])
+               sum += self.cross_entropy(outputs[output_index])
+           return sum / len(rand_data_points)
+               
+         
      def evaluate(self, inputs):
-         return np.where( self.argMax( super().evaluate(inputs) ) == 1 )
+         stuff = super().evaluate(inputs)
+         self.softMax(stuff)
+         print(f'STUFF {stuff}')
+         max = stuff[0,0]
+         index = 0
+         for a in range( stuff.shape[0] ):
+             if stuff[a,0] > max:
+                 max = stuff[a,0]
+                 index = a
+             
+         return index
+     
+     def soft_evaluate(self, inputs):
+         stuff = super().evaluate(inputs)
+         self.softMax(stuff)
+         return stuff
      
      def accuracy(self, testX, testY):
          if self.trainX is None or self.trainY is None:
@@ -52,7 +78,7 @@ class CENet(NeuralNet):
           
          sum = 0
          for input_set, output_index in zip(testX, testY):
-            outputs = self.evaluate(input_set)
+            outputs = self.soft_evaluate(input_set)
             sum += self.cross_entropy( outputs[output_index] )
          return sum / len( testY )
          
