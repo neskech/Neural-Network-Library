@@ -1,6 +1,5 @@
 from NeuralNetwork.NeuralNet import NeuralNet
 from NeuralNetwork.NeuralNet import ACT_FUNC
-from NeuralNetwork.NeuralNet import running_product
 import numpy as np
 
 class SSRNet(NeuralNet):
@@ -14,8 +13,8 @@ class SSRNet(NeuralNet):
         self.prev_gradient_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
         self.batch_size = batch_size
         
-    def __init__(self, fileName):
-        self.load(file_name=fileName)
+ #   def __init__(self, fileName):
+       # self.load(file_name=fileName)
        
     def SSR(self) -> float:
         sum = 0

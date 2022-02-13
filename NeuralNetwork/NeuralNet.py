@@ -1,12 +1,10 @@
 
-from audioop import bias
 import numpy as np
 import matplotlib.pyplot as py
 from abc import abstractmethod
 from enum import Enum
 import random
 
-from pint import test
 
 
 
@@ -156,12 +154,10 @@ class NeuralNet:
             raise Exception('ERROR in accuracy function:: training sets not initialized')
         
         count = 0
-        for input_set, output_set in zip(testX, testY):
+        for input_set, output_index in zip(testX, testY):
             output = self.evaluate(input_set)
             indexO = np.where( output == max(output) )
-            output_set = [output_set]
-            indexP = np.where( output_set == max(output_set) )
-            count += 1 if  indexO == indexP else 0
+            count += 1 if  indexO == output_index else 0
 
         return count / len(self.trainY)
      
