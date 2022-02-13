@@ -38,6 +38,9 @@ class NeuralNet:
         self.trainY = None
         self.debug = debug
         self.use_last_activation = True
+        
+        self.coef = 1
+        self.scaler = 1
         np.seterr(all='print')
      
     
@@ -47,31 +50,31 @@ class NeuralNet:
             return max(0,x)
 
         elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-             x = np.clip(x,-50,50)
+             x = np.clip(x,-15,20)
              return np.log( 1 + np.e ** x )
 
         elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-50,50)
+            x = np.clip(x,-20,20)
             return  1  / ( 1 + np.e ** -x )
         elif self.FUNC is ACT_FUNC.TANH:
-            x = np.clip(x,-50,50)
-            return
+            x = np.clip(x,-10,10)
+            return ( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x)
     
     def activation_deriv(self, x : np.float64):
         if self.FUNC is ACT_FUNC.RELU:
             return 1 if x >= 0 else 0
 
         elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-                x = np.clip(x,-50,50)
+                x = np.clip(x,-15,20)
                 return (np.e ** x) / ( 1 + np.e ** x )
 
         elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-50,50)
+            x = np.clip(x,-20,20)
             return  ( np.e ** -x ) / ( ( 1 + np.e ** -x) ** 2 ) 
         
         elif self.FUNC is ACT_FUNC.TANH:
-            x = np.clip(x,-50,50)
-            return ( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x)
+            x = np.clip(x,-10,10)
+            return 1 - (( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x) ) ** 2
 
     
     def evaluate(self, inputs ):
@@ -248,20 +251,24 @@ class NeuralNet:
                 self.init_paramaters(mean , SD, False,seed)
                 for j in range( num_test_iterations ):
                     self.optomize()
-                SSR_and_seed_list.append( (self.cross_entropy_cost(), seed) )
+                SSR_and_seed_list.append( (self.cost_function(), seed) )
 
             SSR_and_seed_list = sorted(SSR_and_seed_list, key= lambda x: x[0], reverse=True )
             self.init_paramaters(mean, SD, seed=SSR_and_seed_list[0][1] )
             
             pat = 0
             for i in range( num_iterations ):
-                prev_cost = self.cross_entropy_cost()
-                if self.debug: print(f' SSR :: {prev_cost} \nLR :: {self.learn_rate}' )
+                
+                if self.use_lr_Tuning: 
+                     prev_cost = self.cost_function()
+                     if self.debug: print(f' SSR :: {prev_cost} \nLR :: {self.learn_rate}' )
                 
                 self.optomize()
-                curr_cost = self.cross_entropy_cost()
-                if curr_cost > prev_cost: 
-                    pat += 1
+                
+                if self.use_lr_Tuning:
+                  curr_cost = self.cost_function()
+                  if curr_cost > prev_cost: 
+                      pat += 1
 
                 if self.use_lr_Tuning and pat > self.lr_patience:
                      self.learn_rate = max( self.learn_rate * self.lr_decrease, self.lr_min )
@@ -295,22 +302,24 @@ class NeuralNet:
           
     def save(self, file_name):
         with open(file_name, 'w') as f:
-            f.write(f'LAYER_SIZES :: {self.dimensions}\n')
+            f.write(f'LAYER_SIZES: {self.dimensions}\n')
             
             if (self.FUNC == ACT_FUNC.RELU):
-                f.write('ACT FUNC :: RELU\n')
+                f.write('ACT FUNC: RELU\n')
             elif (self.FUNC == ACT_FUNC.SOFT_PLUS):
-                f.write('ACT FUNC :: SOFT PLUS\n')
+                f.write('ACT FUNC: SOFT PLUS\n')
             elif (self.FUNC == ACT_FUNC.SIGMOID):
-                f.write('ACT FUNC :: SIGMOID\n')
+                f.write('ACT FUNC: SIGMOID\n')
+            elif (self.FUNC == ACT_FUNC.TANH):
+                f.write('ACT FUNC: TANH\n')
                 
-            f.write(f'USE LAST ACTIVATION :: {self.use_last_activation}\n')
-            f.write('WEIGHTS ::\n')
+            f.write(f'USE LAST ACTIVATION: {self.use_last_activation}\n')
+            f.write('WEIGHTS:' + '-'*20 + '\n')
             for weight in self.weights:
                 for val in np.nditer(weight):
                     f.write(str(val) + '\n')
                     
-            f.write('BIAS ::\n')
+            f.write('BIASES:' + '-'*20 + '\n')
             for bias in self.biases:
                 for val in np.nditer(bias):
                     f.write(str(val) + '\n')
@@ -318,7 +327,7 @@ class NeuralNet:
         
     def load(self, file_name):
         lines = open(file_name,'r').readlines()
-        length = len('LAYER_SIZES :: ')
+        length = len('LAYER_SIZES: ')
         dimenSTR = lines[0][ length + 1 : -2 ].split(',')
         self.dimensions = [ int(char.strip()) for char in dimenSTR ]
         self.num_layers = len(self.dimensions)
@@ -329,8 +338,10 @@ class NeuralNet:
             self.FUNC = ACT_FUNC.SOFT_PLUS
         elif lines[1].find('SIGMOID') != -1:
             self.FUNC = ACT_FUNC.SIGMOID
+        elif lines[1].find('TANH') != -1:
+            self.FUNC = ACT_FUNC.TANH
         
-        self.use_last_activation = bool( lines[2][ len('USE LAST ACTIVATION :: ') : ] )
+        self.use_last_activation = bool( lines[2][ len('USE LAST ACTIVATION: ') : ] )
         
         weightShapes = [ (a,b) for a,b in zip(self.dimensions[1:],self.dimensions[:-1]) ]
         weightSizes = [ a * b for a,b in zip(self.dimensions[1:], self.dimensions[:-1]) ]
@@ -341,7 +352,7 @@ class NeuralNet:
         isWeight = True
         index = 0
         for line in lines[4:]:
-            if line.find('BIAS') != -1:
+            if line.find('BIASES') != -1:
                 isWeight = False
                 index = 0
                 continue

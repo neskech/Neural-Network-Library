@@ -9,32 +9,34 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_iris
 import numpy as np
 
-data, target = load_iris(return_X_y=True)
+data, target = load_digits(n_class=10, return_X_y=True)
 scaler = StandardScaler().fit(data)
 data = scaler.transform(data)
 trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, random_state=16)
 
-layerShapes = (4, 8, 8, 3)
+layerShapes = (64, 25, 25, 10)
 net = CENet( 
             dimensions= layerShapes,
-            learning_rate= 0.005,
-            activation_function= ACT_FUNC.SOFT_PLUS,
+            learning_rate= 0.01,
+            activation_function= ACT_FUNC.TANH,
             debug=True,
-            batch_size= 10,
-            momentum= 0.95 )
+            batch_size= 5,
+            momentum= 0.90,
+            EXPWA= 0.90,
+            epsillon=0.0000001)
 
 net.set_learning_params(
-    useTuning = True,
-    decrease = 0.99,
-    patience = 3,
+    useTuning = False,
+    decrease = 0.90,
+    patience = 50,
     min = 1e-9
 )
 
 net.use_last_activation = False
 net.set_training_data(trainX, trainY)
-net.train_and_random_restarts( num_iterations = 10000, num_test_iterations = 50, num_restarts = 5)
+net.train_and_random_restarts( num_iterations = 5000, num_test_iterations = 100, num_restarts = 5)
 print(f'accuracy {net.accuracy(testX, testY)}')
 
 for i in range( len(testX) ) :
     print(f'Observed value: {testY[i]} --Predicted value: {net.evaluate(testX[i])}')
-net.save('Models/Iris.txt')
+net.save('Models/Digits.txt')

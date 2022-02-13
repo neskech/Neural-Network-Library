@@ -3,15 +3,20 @@ from NeuralNetwork.NeuralNet import ACT_FUNC
 import numpy as np
 
 class CENet(NeuralNet):
-     def __init__(self, dimensions : list[int], learning_rate : float, activation_function : ACT_FUNC, debug : bool = False, batch_size : int = 3, momentum : float = 0  ) -> None:
+     def __init__(self, dimensions : list[int], learning_rate : float, activation_function : ACT_FUNC, debug : bool = False, batch_size : int = 3, momentum : float = 0, EXPWA : float = 0, epsillon : float = 0.00001  ) -> None:
         super().__init__(dimensions, learning_rate, activation_function, debug)
         self.momentum = momentum
 
         weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
-        self.prev_gradient_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-        self.prev_gradient_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
-        self.batch_size = batch_size
+        self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+        self.prev_momentum_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+        self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+        self.prev_EXPWA_Bias =[ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
         
+        self.batch_size = batch_size
+        self.EXPWA = EXPWA
+        self.episllon = epsillon
+        self.cost_function = self.cross_entropy_cost
     # def __init__(self, fileName):
      #    self.load(file_name=fileName)
         
@@ -57,7 +62,7 @@ class CENet(NeuralNet):
      def evaluate(self, inputs):
          stuff = super().evaluate(inputs)
          self.softMax(stuff)
-         print(f'STUFF {stuff}')
+       #  print(f'STUFF {stuff}')
          max = stuff[0,0]
          index = 0
          for a in range( stuff.shape[0] ):
@@ -76,11 +81,19 @@ class CENet(NeuralNet):
          if self.trainX is None or self.trainY is None:
               raise Exception('ERROR in train function:: training sets not initialized')
           
-         sum = 0
+         count = 0
          for input_set, output_index in zip(testX, testY):
             outputs = self.soft_evaluate(input_set)
-            sum += self.cross_entropy( outputs[output_index] )
-         return sum / len( testY )
+            
+            index = 0
+            max = outputs[0,0]
+            for a in range( outputs.shape[0] ):
+               if outputs[a,0] > max:
+                 max = outputs[a,0]
+                 index = a
+                 
+            count += 1 if index == output_index else 0
+         return count / len( testY )
          
             
      def optomize(self):
@@ -109,15 +122,31 @@ class CENet(NeuralNet):
         
         mag = 0
         for a in range( len(self.weights) ):
-            changeW = avgD_weights[a] * self.learn_rate + self.momentum * self.prev_gradient_Weight[a]
-            self.weights[a] -= changeW
-            self.prev_gradient_Weight[a] = changeW
-            mag += np.sum( np.multiply(changeW,changeW) )
             
-            changeB = avgD_biases[a] * self.learn_rate + self.momentum * self.prev_gradient_Bias[a]
-            self.biases[a] -= changeB
-            self.prev_gradient_Bias[a] = changeB
-            mag += np.sum( np.multiply(changeB,changeB) )
+            EXPWA_Weight = self.EXPWA * self.prev_EXPWA_Weight[a] + (1 - self.EXPWA) * np.square(avgD_weights[a])
+            lr_matrix = np.empty( self.weights[a].shape )
+            lr_matrix.fill(self.learn_rate)
+            lr_matrix =  np.divide(lr_matrix,  np.sqrt( (EXPWA_Weight + self.episllon) ) )
+            
+            changeW =  self.momentum * self.prev_momentum_Weight[a] + (1 - self.momentum) * avgD_weights[a]
+            self.weights[a] -= np.multiply(changeW, lr_matrix)
+            self.prev_momentum_Weight[a] = changeW
+            self.prev_EXPWA_Weight[a] = EXPWA_Weight
+            
+            if self.debug: mag += np.sum( np.square(changeW) )
+            
+            EXPWA_Bias = self.EXPWA* self.prev_EXPWA_Bias[a] + (1 - self.EXPWA) * np.square(avgD_biases[a])
+            lr_matrix = np.empty( self.biases[a].shape )
+            lr_matrix.fill(self.learn_rate)
+            lr_matrix =  np.divide(lr_matrix,  np.sqrt( (EXPWA_Bias + self.episllon) ) )
+            
+            changeB =  self.momentum * self.prev_momentum_Bias[a] + (1 - self.momentum) * avgD_biases[a] 
+            self.biases[a] -= np.multiply(changeB, lr_matrix)
+            self.prev_momentum_Bias[a] = changeB
+            self.prev_EXPWA_Bias[a] = EXPWA_Bias
+             
+            if self.debug: mag += np.sum( np.square(changeB) )
+            
         if self.debug: print(f'GRADIENT MAG :: {np.sqrt(mag)}')
           
         
