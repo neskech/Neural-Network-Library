@@ -66,8 +66,11 @@ class NeuralNet:
             return  ( np.e ** -x ) / ( ( 1 + np.e ** -x) ** 2 ) 
 
     
-    def evaluate(self, inputs : list[np.float64]):
-        values = np.array(inputs, dtype=np.float64).reshape( ( len(inputs), 1) )
+    def evaluate(self, inputs ):
+        if isinstance(inputs, list):
+            values = np.array(inputs, dtype=np.float64).reshape( ( len(inputs), 1) )
+        else:
+           values = values.reshape( (values.size, 1) )
 
         for k in range( self.num_layers - 1 ):
               values = np.matmul( self.weights[k] , values ) + self.biases[k]
@@ -261,8 +264,15 @@ class NeuralNet:
         pass
     
     def set_training_data(self, trainX, trainY):
-        self.trainX = trainX
-        self.trainY = trainY
+        if isinstance(trainX, list):
+             self.trainX = np.array(trainX, dtype=np.float64).reshape( (len(trainX),1) )
+        else:
+             self.trainX = trainX
+             
+        if isinstance(trainY, list):
+             self.trainY = np.array(trainY, dtype=np.float64).reshape( (len(trainY),1) )
+        else:
+             self.trainY = trainY
         
     def init_WB(self, weights, biases):
        self.weights = weights

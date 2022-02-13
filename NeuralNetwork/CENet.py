@@ -1,5 +1,5 @@
-import NeuralNet
-from NeuralNet import ACT_FUNC
+from NeuralNetwork.NeuralNet import NeuralNet
+from NeuralNetwork.NeuralNet import ACT_FUNC
 import numpy as np
 
 class CENet(NeuralNet):
@@ -12,8 +12,8 @@ class CENet(NeuralNet):
         self.prev_gradient_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
         self.batch_size = batch_size
         
-     def __init__(self, fileName):
-        self.load(file_name=fileName)
+   #  def __init__(self, fileName):
+       # self.load(file_name=fileName)
         
         
      def argMax(self, values, threshold : float = 0.5):
@@ -33,7 +33,7 @@ class CENet(NeuralNet):
      def cross_entropy_deriv(self, output_neuron_number, output_values):
          #Output neuron number is the observed value of the data point
          matrix = np.zeros( (self.dimensions[-1], 1) )
-         for a in range( len(self.dimensions[-1] ) ):
+         for a in range( self.dimensions[-1]  ):
              if a == output_neuron_number:
                  matrix[a,0] = output_values[a,0] - 1
              else:
@@ -44,7 +44,7 @@ class CENet(NeuralNet):
          return -np.log(predicted_value)
      
      def evaluate(self, inputs):
-         return self.argMax( super().evaluate(inputs) )
+         return np.where( self.argMax( super().evaluate(inputs) ) == 1 )
      
      def accuracy(self, testX, testY):
          if self.trainX is None or self.trainY is None:
