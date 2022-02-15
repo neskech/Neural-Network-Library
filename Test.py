@@ -1,8 +1,8 @@
 
 from statistics import mean
 from xml.sax import xmlreader
-from NeuralNetwork.CENet import CENet
-from NeuralNetwork.NeuralNet import ACT_FUNC
+from NeuralNetwork.Model.CENet import CENet
+from NeuralNetwork.Model.NeuralNet import ACT_FUNC
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_digits
 from sklearn.preprocessing import StandardScaler
@@ -18,7 +18,7 @@ layerShapes = (64, 25, 25, 10)
 net = CENet( 
             dimensions= layerShapes,
             learning_rate= 0.01,
-            activation_function= ACT_FUNC.TANH,
+            activation_function= ACT_FUNC.RELU,
             debug=True,
             batch_size= 5,
             momentum= 0.90,
@@ -39,4 +39,4 @@ print(f'accuracy {net.accuracy(testX, testY)}')
 
 for i in range( len(testX) ) :
     print(f'Observed value: {testY[i]} --Predicted value: {net.evaluate(testX[i])}')
-net.save('Models/Digits.txt')
+net.save('Models/Digits2.txt')

@@ -47,6 +47,7 @@ class NeuralNet:
     
     def activation(self, x : np.float64):
         if self.FUNC is ACT_FUNC.RELU:
+            x = np.clip(x,-300,300)
             return max(0,x)
 
         elif self.FUNC is ACT_FUNC.SOFT_PLUS:
@@ -214,7 +215,7 @@ class NeuralNet:
         py.show()
           
                      
-    def train_and_animate(self, subdivisions : float, num_iterations : int, rangeX, delay : float = 0.00005):
+    def train_and_animate(self, subdivisions : float, num_iterations : int, rangeX, delay : float = 0.000000005):
         if self.trainX is None or self.trainY is None:
             raise Exception('ERROR in train_and_andimate function:: training sets not initialized')
         
@@ -230,7 +231,7 @@ class NeuralNet:
             if self.debug: print(f' SSR :: {self.SSR()}' )
             
             xData.append( [ (a / subdivisions) * (rangeX[1] - rangeX[0]) for a in range( subdivisions ) ] )
-            yData.append( [ self.evaluate([a], use_final_act_func= False)[0] for a in xData[i] ] )
+            yData.append( [ self.evaluate([a])[0] for a in xData[i] ] )
             py.plot(xData[i],yData[i])
             py.scatter(self.trainX,self.trainY)
             py.pause(delay)
@@ -241,7 +242,7 @@ class NeuralNet:
 
         py.show()
         
-    def train_and_random_restarts(self, num_iterations, num_test_iterations, num_restarts, mean = -1, SD = 1 ):
+    def train_and_random_restarts(self, num_iterations, num_test_iterations, num_restarts, mean = 0, SD = 1 ):
             if self.trainX is None or self.trainY is None:
                 raise Exception('ERROR in train function:: training sets not initialized')
 

@@ -1,5 +1,5 @@
-from NeuralNetwork.NeuralNet import NeuralNet
-from NeuralNetwork.NeuralNet import ACT_FUNC
+from NeuralNetwork.Model.NeuralNet import NeuralNet
+from NeuralNetwork.Model.NeuralNet import ACT_FUNC
 import numpy as np
 
 class SSRNet(NeuralNet):

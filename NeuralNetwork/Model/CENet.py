@@ -1,5 +1,5 @@
-from NeuralNetwork.NeuralNet import NeuralNet
-from NeuralNetwork.NeuralNet import ACT_FUNC
+from NeuralNetwork.Model.NeuralNet import NeuralNet
+from NeuralNetwork.Model.NeuralNet import ACT_FUNC
 import numpy as np
 
 class CENet(NeuralNet):
@@ -17,8 +17,8 @@ class CENet(NeuralNet):
         self.EXPWA = EXPWA
         self.episllon = epsillon
         self.cost_function = self.cross_entropy_cost
-    # def __init__(self, fileName):
-     #    self.load(file_name=fileName)
+     def __init__(self, fileName):
+        self.load(file_name=fileName)
         
         
      def argMax(self, values, threshold : float = 0.5):
