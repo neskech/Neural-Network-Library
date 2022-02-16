@@ -21,3 +21,12 @@ def Relu_Deriv(matrix):
 def softPlus_Deriv(matrix):
     pass
 
+def sigmoid_Deriv(matrix):
+    pass
+
+def hyperbolic_tangent_Deriv(matrix):
+    pass
+
+def softMax_Deriv(matrix):
+    pass
+
