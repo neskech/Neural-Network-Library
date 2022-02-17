@@ -12,23 +12,21 @@ class ACT_FUNC(Enum):
     TANH = 3
     SOFTMAX = 4
     
-class POOL(Enum):
-    MAX = 0
-    AVG = 1
-    NONE = 2
-    
 
 class Layer:
     def __init__(self, size : int, func : ACT_FUNC) -> None:
         self.size = size
         self.activation_func = func
+        self.output_shape = None
+        self.input_shape = None
+        
         if not func is None:
             self.setActivation(func)
     
     def process(self, inputs):
         pass
     
-    def init(self, prevLayerShape, nextLayerSize):
+    def set_input_size(self, layer):
         pass
     
     def init_rand_params(self, seed : int, mean : float = 0, SD : float = 1):
@@ -85,17 +83,20 @@ class ConvolutionLayer(Layer):
                              break
                          
                          output[s,a,b] = np.dot( inputs[ :, a : a + self.kernel_shape[0], b : b + self.kernel_shape[1] ], self.kenerl[s] ) 
-                 else:
-                      #If inner loop was not broken
-                     continue
-                 break    
              
         return output
-                    
-     def init(self, prevLayerShape, nextLayerSize):
+      
+     def activate(self, inputs, use_derivative : bool):
+         if not use_derivative:
+             return self.activation(inputs)
+         else:
+             return self.activation_derivative(inputs)
+                     
+     def set_input_size(self, layer : Layer):
+          prevLayerOutput = layer.output_shape
           self.biases = np.zeros( shape= (self.size, 1) )
-          if self.inputShape == (None,None,None): self.inputShape = prevLayerShape
-          self.kernel_shape = (self.kernel_shape[0], self.kernel_shape[1], prevLayerShape[2])
+          if self.inputShape == (None,None,None): self.inputShape = prevLayerOutput
+          self.kernel_shape = (self.kernel_shape[0], self.kernel_shape[1], prevLayerOutput[2])
           self.kenerl = np.zeros( self.kernel_shape )
           self.output_shape = (self.inputShape[0] - self.kernel_shape[0] + 1, self.inputShape[1] - self.kernel_shape[1] + 1, self.size)
         
@@ -124,8 +125,8 @@ class MaxPoolLayer(Layer):
              
         return output
     
-    def init(self, prevLayerShape, nextLayerSize):
-          self.inputShape = prevLayerShape
+    def set_input_size(self, layer : Layer):
+          self.inputShape = layer.output_shape
           self.output_shape = (self.inputShape[0] - self.shape[0] + 1, self.inputShape[1] - self.shape[1] + 1, self.size)
 
 class AvgPoolLayer(Layer):
@@ -152,8 +153,8 @@ class AvgPoolLayer(Layer):
              
         return output
     
-    def init(self, prevLayerShape, nextLayerSize):
-          self.inputShape = prevLayerShape
+    def set_input_size(self, layer : Layer):
+          self.inputShape = layer.output_shape
           self.output_shape = (self.inputShape[0] - self.shape[0] + 1, self.inputShape[1] - self.shape[1] + 1, self.size)
 
 class FlattenLayer(Layer):
@@ -163,7 +164,12 @@ class FlattenLayer(Layer):
     def process(self, inputs):
          return np.ndarray.flatten(inputs)
      
-    def init(self, prevLayerShape, nextLayerShape):
+    def back_process(self, inputs):
+        #Unflattens the array
+        return np.reshape(inputs, self.input_shape)
+    
+     
+    def set_input_size(self, prevLayerShape):
         self.inputShape = prevLayerShape
         self.outputShape = ( mul( self.inputShape ) )
         
@@ -182,9 +188,20 @@ class DenseLayer(Layer):
     def process(self, inputs):
         return np.matmul(self.weights, inputs) + self.biases
     
-    def init(self, prevLayerShape, nextLayerSize):
+    def back_process(self, inputs):
+        #Unflattens the array
+        return np.reshape(self.weights.T, inputs)
+       
+    def activate(self, inputs, use_derivative : bool):
+         if not use_derivative:
+             return self.activation(inputs)
+         else:
+             return self.activation_derivative(inputs)
+             
+    def set_input_size(self, layer : Layer):
+        prevLayerOutput = layer.output_shape
         self.biases = np.zeros( shape= (self.size, 1) )
-        self.weights = np.zeros(shape=(self.size, nextLayerSize))
-        self.output_shape = nextLayerSize
-        self.input_shape = prevLayerShape
+        self.weights = np.zeros( shape=(prevLayerOutput[0], self.size) )
+        self.output_shape = (self.size)
+        self.input_shape = prevLayerOutput
         

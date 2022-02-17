@@ -5,16 +5,12 @@ from abc import abstractmethod
 from enum import Enum
 import random
 
+from NeuralNetwork.Layer.Layer import AvgPoolLayer, ConvolutionLayer, DenseLayer, FlattenLayer, Layer, MaxPoolLayer
+from NeuralNetwork.Model.Cost import SSR, Cost, Cross_Entropy, Cross_Entropy_Derivative, SSR_Derivative
+from NeuralNetwork.Model.Optomizers import Adam_Optomizer, Default_Optomizer, Optomizer
 
 
 
-
-
-class ACT_FUNC(Enum):
-    SOFT_PLUS = 0
-    RELU = 1
-    SIGMOID = 2
-    TANH = 3
 
 def running_product(list):
     sum = 0
@@ -24,59 +20,135 @@ def running_product(list):
 
 class NeuralNet:
     
-    def __init__(self, dimensions : list[int], learning_rate : np.float64, activation_function : ACT_FUNC, debug : bool = False):
-        self.FUNC = activation_function
-        self.dimensions = dimensions
-        self.num_layers = len(dimensions)
-        self.learn_rate = learning_rate
+    def __init__(self):
+        self.useLearningParams = False
+        self.layers : list[Layer] = []
+        
 
-        weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
-        self.weights = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-        self.biases = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
-        
-        self.trainX = None
-        self.trainY = None
-        self.debug = debug
-        self.use_last_activation = True
-        
-        self.coef = 1
-        self.scaler = 1
-        np.seterr(all='print')
-     
     
     
-    def activation(self, x : np.float64):
-        if self.FUNC is ACT_FUNC.RELU:
-            x = np.clip(x,-300,300)
-            return max(0,x)
-
-        elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-             x = np.clip(x,-15,20)
-             return np.log( 1 + np.e ** x )
-
-        elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-20,20)
-            return  1  / ( 1 + np.e ** -x )
-        elif self.FUNC is ACT_FUNC.TANH:
-            x = np.clip(x,-10,10)
-            return ( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x)
+    def compile(self, optomizer, cost, debug):
+        match cost:
+            case Cost.SQUARE_RESIDUALS:
+                self.cost_function = SSR
+                self.cost_function_derivative = SSR_Derivative
+                
+                dimensions = [ a.size for a in self.layers if type(a).__class__ is DenseLayer or type(a).__class__ is FlattenLayer ]
+                weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
+                self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+                self.prev_momentum_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+                self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+                self.prev_EXPWA_Bias =[ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+                
+            case Cost.CROSS_ENTROPY:
+                self.cost_function = Cross_Entropy
+                self.cost_function_derivative = Cross_Entropy_Derivative
+                
+        match optomizer:
+            case Optomizer.DEFAULT:
+                self.optomizer = Default_Optomizer
+            case Optomizer.ADAM:
+                self.optomizer = Adam_Optomizer
     
-    def activation_deriv(self, x : np.float64):
-        if self.FUNC is ACT_FUNC.RELU:
-            return 1 if x >= 0 else 0
-
-        elif self.FUNC is ACT_FUNC.SOFT_PLUS:
-                x = np.clip(x,-15,20)
-                return (np.e ** x) / ( 1 + np.e ** x )
-
-        elif self.FUNC is ACT_FUNC.SIGMOID:
-            x = np.clip(x,-20,20)
-            return  ( np.e ** -x ) / ( ( 1 + np.e ** -x) ** 2 ) 
+    def add(self, layer : Layer):
+        self.layers.append(layer)
+        if len(self.layers) > 1:
+            self.layers[ len(self.layers) - 1].set_input_size( self.layers[ len(self.layers) - 2 ] )
         
-        elif self.FUNC is ACT_FUNC.TANH:
-            x = np.clip(x,-10,10)
-            return 1 - (( np.e ** x - np.e ** -x) / ( np.e ** x + np.e ** -x) ) ** 2
 
+    
+    def random_restarts(self, numIterations, numRestarts, mean = 0, SD = 1):
+            costsAndSeeds = []
+            for i in range( numRestarts ):
+                seed = random.randint(0,5000)
+                self.init_paramaters(mean , SD, False, seed)
+                for j in range( numIterations ):
+                    self.optomize()
+                costsAndSeeds.append( (self.cost_function(), seed) )
+
+            costsAndSeeds = sorted(costsAndSeeds, key= lambda x: x[0], reverse=True)
+            self.init_paramaters(mean, SD, seed = costsAndSeeds[0][1])
+    
+    def set_learningRate_settings(self, patience, decrease, min):
+        self.useLearningParams = True
+        self.lr_patience = patience
+        self.lr_decrease = decrease
+        self.lr_min = min
+        pass
+    
+    def set_hyper_params(self, learningRate, momentum, EAW, epsillon):
+        self.learningRate = learningRate
+        self.momentum = momentum
+        self.EAW = EAW
+        self.epsillon= epsillon
+    
+    def init_paramters(self, mean, SD, seed):
+        for layer in self.layers:
+            layer.init_rand_params(seed, mean, SD)
+            
+    def train(X, Y, numIterations, numRestarts = 0, numRestart_Iterations = 0, batch_size = 1):
+        pass
+    
+    def display(X, Y):
+        pass
+    
+    def animate():
+        pass
+    
+    def forward_propagation(self, input):
+        outputs = []
+        acts = []
+        input = np.array(input, dtype=np.float64).reshape(  (len(input), 1))
+        acts.append(input)
+        
+        for index, layer in enumerate(self.layers):
+            if not acts[index] is None:
+                  values = layer.process( acts[index] )
+            else:
+                  values = layer.process( outputs[index] )
+                  
+            outputs.append( values )
+            
+            if not type(layer).__class__ is MaxPoolLayer and not type(layer).__class__ is AvgPoolLayer:
+              acts.append( layer.activate(values) )
+            else:
+              acts.append( None )
+
+        return outputs, acts            
+    
+    def backwards_propagation():
+        pass
+    
+    
+    def freeMemory(self):
+         for layer in self.layers:
+             if type(layer).__class__ is ConvolutionLayer:
+                 del layer.kernel
+                 del layer.biases
+             elif type(layer).__class__ is DenseLayer:
+                 del layer.weights
+                 del layer.biases
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     def evaluate(self, inputs ):
         values = None
