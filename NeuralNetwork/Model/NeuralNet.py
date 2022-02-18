@@ -7,6 +7,7 @@ import random
 
 from NeuralNetwork.Layer.Layer import AvgPoolLayer, ConvolutionLayer, DenseLayer, FlattenLayer, Layer, MaxPoolLayer
 from NeuralNetwork.Model.Cost import SSR, Cost, Cross_Entropy, Cross_Entropy_Derivative, SSR_Derivative
+from NeuralNetwork.Model.Functiions import Classification_accuracy, Regression_accuracy
 from NeuralNetwork.Model.Optomizers import Adam_Optomizer, Default_Optomizer, Optomizer
 
 
@@ -27,19 +28,14 @@ class NeuralNet:
 
     
     
-    def compile(self, optomizer, cost, debug):
+    def compile(self, optomizer, cost, accuracy, debug = False ):
+        self.debug = debug
+        self.accuracy = Classification_accuracy if accuracy else Regression_accuracy
+
         match cost:
             case Cost.SQUARE_RESIDUALS:
                 self.cost_function = SSR
-                self.cost_function_derivative = SSR_Derivative
-                
-                dimensions = [ a.size for a in self.layers if type(a).__class__ is DenseLayer or type(a).__class__ is FlattenLayer ]
-                weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
-                self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-                self.prev_momentum_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
-                self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-                self.prev_EXPWA_Bias =[ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
-                
+                self.cost_function_derivative = SSR_Derivative             
             case Cost.CROSS_ENTROPY:
                 self.cost_function = Cross_Entropy
                 self.cost_function_derivative = Cross_Entropy_Derivative
@@ -48,7 +44,19 @@ class NeuralNet:
             case Optomizer.DEFAULT:
                 self.optomizer = Default_Optomizer
             case Optomizer.ADAM:
-                self.optomizer = Adam_Optomizer
+                self.optomizer = Adam_Optomizer                             
+                dimensions = [ a.size for a in self.layers if type(a).__class__ is DenseLayer or type(a).__class__ is FlattenLayer ]
+                weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
+                self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+                self.prev_momentum_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+                self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
+                self.prev_EXPWA_Bias =[ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+
+                if any( [type(a).__class__ is ConvolutionLayer for a in self.layers] ):
+                    dims = [ (a.size) + a.kernel_shape for a in self.layers if type(a).__class__ is ConvolutionLayer ]
+                    self.prev_momentum_kernel = [ np.zeros(a) for a in dims ]
+                    self.prev_EXPA_kernel = [ np.zeros(a) for a in dims ]
+
     
     def add(self, layer : Layer):
         self.layers.append(layer)
@@ -116,8 +124,32 @@ class NeuralNet:
 
         return outputs, acts            
     
-    def backwards_propagation():
-        pass
+    def backwards_propagation(self, cost_deriv, outputs, acts):
+        dWeights = []
+        dBiases = []
+        dKernel = []
+        indices = [ i for i in range(len(self.layers)) if type(self.layers[i]).__class__ is ConvolutionLayer or type(self.layers[i]).__class__ is DenseLayer ]
+        #Make derib indexes array for each layer with parsaters
+        for deriv_index in indices:
+            values = cost_deriv
+            
+            #Make numLayers all the actual layers
+            for k in range( self.num_layers - 2, deriv_index - 1, -1 ):  
+               #For the first iteration, check if we have activation function on final layer
+               #print(f'IN LOOP :: k -> {k} outputs[k] shape -> {outputs[k].shape} weights shape -> {self.weights[k].shape} values shape -> {values.shape}')
+               if self.use_last_activation or k < self.num_layers - 2:
+                    act_deriv = np.zeros( outputs[k].shape )
+                    for a in range( len(act_deriv) ):
+                         act_deriv[a][0] = self.activation_deriv( outputs[k][a,0] )     
+                         
+                    values = np.multiply(values, act_deriv)
+                    
+               if k != deriv_index:
+                   values = np.matmul( self.weights[k].T, values )
+                  
+            dBiases.append( values ) 
+            #print(f'VALUES SHAPE {values.shape} AND ACTS SHAPE {acts[deriv_index].shape} AND DERIV INDEX {deriv_index}')
+            dWeights.append( np.matmul(values, acts[deriv_index].T ) )
     
     
     def freeMemory(self):
