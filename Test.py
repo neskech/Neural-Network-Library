@@ -1,42 +1,37 @@
 
-from statistics import mean
-from xml.sax import xmlreader
-from NeuralNetwork.Model.CENet import CENet
-from NeuralNetwork.Model.NeuralNet import ACT_FUNC
-from sklearn.model_selection import train_test_split
-from sklearn.datasets import load_digits
-from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import load_iris
+
+
+
+from audioop import bias
+from NeuralNetwork.Layer.Layer import ACT_FUNC, DenseLayer
+from NeuralNetwork.Model.Cost import Cost, SSR_Derivative
+from NeuralNetwork.Model.NeuralNet import NeuralNet, Optomizer
 import numpy as np
 
-data, target = load_digits(n_class=10, return_X_y=True)
-scaler = StandardScaler().fit(data)
-data = scaler.transform(data)
-trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, random_state=16)
 
-layerShapes = (64, 25, 25, 10)
-net = CENet( 
-            dimensions= layerShapes,
-            learning_rate= 0.01,
-            activation_function= ACT_FUNC.RELU,
-            debug=True,
-            batch_size= 5,
-            momentum= 0.90,
-            EXPWA= 0.90,
-            epsillon=0.0000001)
+X = [ [0], [0.5], [1] ]
+Y = [0, 1, 0]
+#X = [[1]]
+#Y = [5]
+weights_one = np.array( [ [1], [2] ], dtype=np.float64 )
+weights_two = np.array( [ [3,4] ], dtype=np.float64 )
+biases_one = np.array( [ [0], [1] ], dtype=np.float64 )
+biases_two = np.array( [ [2] ], dtype=np.float64 )
+net = NeuralNet()
+net.add(DenseLayer(1))
+net.add(DenseLayer(2, ACT_FUNC.RELU, weights=weights_one, biases=biases_one))
+net.add(DenseLayer(1, ACT_FUNC.NONE, weights=weights_two, biases=biases_two))
+net.set_hyper_params(learningRate=0.01, momentum=0.9, EWA=0.9, epsillon=0.0000001, batch_size=2)
+net.compile(Optomizer.ADAM, Cost.SQUARE_RESIDUALS, accuracy_type='regressive', debug=True, debug_patience=10)
 
-net.set_learning_params(
-    useTuning = False,
-    decrease = 0.90,
-    patience = 50,
-    min = 1e-9
-)
+outputs, acts = net.forward_propagation([1])
+#print('OUTPUT ', acts[1])
+cost_deriv = SSR_Derivative(X, Y, 0, acts[-1])
+dweights, dbiases, dkernels = net.backwards_propagation(outputs, acts, cost_deriv )
+print('dweights ',dbiases)
 
-net.use_last_activation = False
-net.set_training_data(trainX, trainY)
-net.train_and_random_restarts( num_iterations = 5000, num_test_iterations = 100, num_restarts = 5)
-print(f'accuracy {net.accuracy(testX, testY)}')
 
-for i in range( len(testX) ) :
-    print(f'Observed value: {testY[i]} --Predicted value: {net.evaluate(testX[i])}')
-net.save('Models/Digits2.txt')
+#print('cost derivative ',cost_deriv)
+net.fit(X, Y, numIterations=1000)
+net.display(X, Y, 50, 1)
+#print(net.evaluate([[1]]))
