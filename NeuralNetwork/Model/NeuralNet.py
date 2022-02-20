@@ -172,9 +172,12 @@ class NeuralNet:
                
             elif typeL is FlattenLayer:
                 #Processing of flatten layer is just the inputs of an ANN
-                acts.append(layer.process(outputs[index-1]))
+                acts.append(layer.process(outputs[-1]))
+                outputs.append(acts[-1])
+            #Else its a pool layer
             else:
-                outputs.append(layer.process(outputs[index-1]))
+                outputs.append(layer.process(acts[-1]))
+                acts.append(outputs[-1])
 
         return outputs, acts            
     
@@ -187,23 +190,23 @@ class NeuralNet:
         
         deriv_indices = [i for i in range(len(self.layers[:-1])) if type(self.layers[i]) is ConvolutionLayer or type(self.layers[i]) is DenseLayer or type(self.layers[i]) is FlattenLayer]
 
-         
+        shift = 0 if type(self.layers[0]) is ConvolutionLayer else 1
         #print('DERIV INDEX ', deriv_indices, 'FIRST ',first_dense_layer_index)   
         for deriv_index in deriv_indices:
             values = cost_deriv
             ###print('DERIVVVV ',deriv_index)
-            for k in range(self.num_layers - 1, deriv_index, -1):
+            for k in range(self.num_layers - 1, deriv_index - 1, -1):
                 typeL = type(self.layers[k])
-                #print('index ',k,'layer type',typeL.__class__.__name__,'Values shape ',values.shape)
-                if typeL is DenseLayer or typeL is ConvolutionLayer:
-                    act_deriv = self.layers[k].activate(outputs[k-1], predicted_index, use_derivative=True)
+               # print('index ',k,'deriv index',deriv_index,'Values shape ',values.shape)
+                if (typeL is DenseLayer and k > deriv_index) or typeL is ConvolutionLayer:
+                    act_deriv = self.layers[k].activate(outputs[k - shift], predicted_index, use_derivative=True)
                     #print('act deriv shape',act_deriv.shape)
                     ###print('ACT DERIV ',act_deriv)
                     if not act_deriv is None:
                          values = np.multiply(act_deriv, values)
                 
-                if k != deriv_index + 1:
-                    values = self.layers[k].back_process(values)
+                if (k > deriv_index + 1 and (typeL is DenseLayer or typeL is FlattenLayer)) or (k > deriv_index and typeL is ConvolutionLayer) or typeL is MaxPoolLayer or typeL is AvgPoolLayer:
+                    values = self.layers[k].back_process(values, acts[k])
                     ###print('RESULT ',values)
                     
             #If it its a weight we're finding the deriv of
@@ -213,7 +216,7 @@ class NeuralNet:
                 ###print('YEYEYE', [a.shape for a in dweights], 'FINAL ',values, 'ACTS ',acts[deriv_index].T.shape)
                 ##print('HHEHEHE',deriv_index, ' ', values, ' ACTS ', acts[1] )
                 dbiases.append(values)
-                dweights.append(np.matmul(values, acts[deriv_index].T))
+                dweights.append(np.matmul(values, acts[deriv_index + 1 - shift].T))
             #Else its a convolution layer
             else:
                 ###print('NONO')

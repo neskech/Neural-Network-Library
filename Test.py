@@ -7,7 +7,7 @@ from NeuralNetwork.Model.Cost import Cost
 
 from NeuralNetwork.Model.NeuralNet import NeuralNet, Optomizer
 
-data, target = load_digits(n_class=3, return_X_y=True)
+data, target = load_digits(n_class=2, return_X_y=True)
 scaler = StandardScaler().fit(data)
 data = scaler.transform(data)
 data = data.reshape( (data.shape[0], 1, 8, 8))
@@ -16,10 +16,13 @@ trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, r
 net = NeuralNet()
 net.add(ConvolutionLayer(num_kernels=4, func= ACT_FUNC.RELU, kernel_shape=(2,2), input_shape=(1,8,8), stride=1))
 net.add(MaxPoolLayer(shape=(2,2), stride=2))
+net.add(MaxPoolLayer(shape=(2,2), stride=1))
 net.add(FlattenLayer())
-net.add(DenseLayer(size=3, func= ACT_FUNC.TANH))
-net.add(DenseLayer(size=3, func= ACT_FUNC.TANH))
+net.add(DenseLayer(size=5, func= ACT_FUNC.RELU))
+net.add(DenseLayer(size=5, func= ACT_FUNC.RELU))
 net.add(DenseLayer(3, ACT_FUNC.SOFTMAX))
+print([a.input_shape for a in net.layers])
+print([a.output_shape for a in net.layers])
 
 net.set_hyper_params(learningRate=0.01, momentum=0.98, EWA=0.98, epsillon=0.00000001, batch_size=3)
 net.set_learningRate_settings(patience = 50, decrease= 0.5, min = 1e-7)

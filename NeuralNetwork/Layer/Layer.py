@@ -31,7 +31,7 @@ class Layer:
     def init_rand_params(self, seed : int, mean : float = 0, SD : float = 1):
         pass
     
-    def back_process(self, inputs):
+    def back_process(self, inputs, inputs_two):
         pass
     
     def activate(self, inputs, predicted_index = -1, use_derivative : bool = False):
@@ -121,19 +121,22 @@ class ConvolutionLayer(Layer):
         return output
       
     
-     def back_process(self, inputs):
+     def back_process(self, inputs, inputs_two):
         #Input is our dL/dZ. This convolotuion gets us dL/dK
         #Reverse the shape of the output back into the input image shape X    
         if len(inputs.shape) == 2:
             inputs = inputs[np.newaxis, ...]
-        if inputs.shape != self.input_shape:
+        if inputs.shape != self.output_shape:
             raise Exception(f'ERROR: In convolution.back_process() - Input array shape {inputs.shape} does not match required input shape of {self.input_shape}') 
-            
-        inputs = np.pad(inputs, pad_width=1)           
+           
+       # print('BACK PROCESS  INPUTS SHAPE', inputs.shape) 
+        inputs = np.pad(inputs,pad_width=( (0, 0), (1,1), (1,1) ))      
+        #print('BACK PROCESS  INPUTS SHAPE PADDING', inputs.shape)      
         output = np.zeros( self.input_shape )
         #Axis 0 is the number of kernels
+        rKernels = np.rot90(self.kernels, axes=(1,2))
         rKernels = np.rot90(rKernels, axes=(1,2))
-        rKernels = np.rot90(rKernels, axes=(1,2))
+       # print(rKernels.shape, 'KENRNENENEL',self.kernels.shape)
         #Loop for each kernel, no need to loop through the third dimension of the kernels since its constant
         for depth in range( self.input_shape[0] ):
               for a in range(0, self.input_shape[1], self.stride):
@@ -144,7 +147,7 @@ class ConvolutionLayer(Layer):
                          if row_extent > inputs.shape[1] or col_extent > inputs.shape[2]: 
                              break
                          
-                         output[depth,a,b] = np.sum(np.multiply( inputs[ :, a : a + self.kernel_shape[1], b : b + self.kernel_shape[2] ], self.kernels[depth, :, :, :] ) )
+                         output[depth,a,b] = np.sum(np.multiply( inputs[ :, a : a + self.kernel_shape[1], b : b + self.kernel_shape[2] ], rKernels[depth, :, :, :] ) )
         return output
      
      def derive(self, dLdZ, X):
@@ -215,22 +218,34 @@ class MaxPoolLayer(Layer):
              
         return output
     
-    def back_process(self, input):
+    def back_process(self, input, inputs_two):
         #Expanding input to its original size before it was shrinked by the pooling
-        output = np.zeros( (input.shape[0], input.shape[1] * self.shape[0], input.shape[2] * self.shape[1]) )
+        output = np.zeros( (input.shape[0], inputs_two.shape[1], inputs_two.shape[2]) )
         
         for depth in range(output.shape[0]):
-           for a in range(0, output.shape[1], self.shape[0] ):
-              for b in range(0, output.shape[2], self.shape[1] ):
+           for a in range(0, self.output_shape[1], self.shape[0] ):
+              for b in range(0, self.output_shape[2], self.shape[1] ):
                 
                     val = input[depth, a // self.shape[0], b // self.shape[1]] 
-                    subSection = input[depth, a : a + self.shape[0] , b : b + self.shape[1]]
-                    max_index = np.where( subSection == max(subSection) )
+                    subSection = inputs_two[depth, a : a + self.shape[0] , b : b + self.shape[1]]
+                  #  print('sub shape',subSection.shape, 'maxPool shape',self.shape, 'index',(a,b), 'output shape', self.output_shape,  'output array shape', output.shape, 'input shape',self.input_shape, 'inputs array shape',input.shape, 'inoputs two shape ',inputs_two.shape)
+                    max = np.max(subSection)
+                    
+                    max_index = -1
+                    for i in range(self.shape[0]):
+                        for j in range(self.shape[1]):
+                            if max == inputs_two[depth, a + i, b + j]:
+                              #  print('FOUND IT1')
+                                max_index = (i,j)
+                                break
+                        else:
+                            continue
+                        break
                     
                     for i in range(self.shape[0]):
                         for j in range(self.shape[1]):
                             if max_index == (i,j):
-                                output[depth. a + i, b + j] = val
+                                output[depth, a + i, b + j] = val
                             else:
                                 output[depth, a + i, b + j] = 0
         return output
@@ -270,19 +285,19 @@ class AvgPoolLayer(Layer):
              
         return output
     
-    def back_process(self, input):
+    def back_process(self, input, inputs_two):
         #Expanding input to its original size before it was shrinked by the pooling
         output = np.zeros( (input.shape[0], input.shape[1] * self.shape[0], input.shape[2] * self.shape[1]) )
         
         for depth in range(output.shape[0]):
-           for a in range(0, output.shape[1], self.shape[0] ):
-              for b in range(0, output.shape[2], self.shape[1] ):
+           for a in range(0, self.output_shape[1], self.shape[0] ):
+              for b in range(0, self.output_shape[2], self.shape[1] ):
                 
                     val = input[depth, a // self.shape[0], b // self.shape[1]] / (self.shape[0] * self.shape[1])
                     
                     for i in range(self.shape[0]):
                         for j in range(self.shape[1]):
-                                output[depth. a + i, b + j] = val
+                                output[depth, a + i, b + j] = val
         return output
     
     def set_input_size(self, layer : Layer):
@@ -298,15 +313,15 @@ class FlattenLayer(Layer):
     def process(self, inputs):
         return np.reshape(inputs, (-1,1) )
      
-    def back_process(self, inputs):
+    def back_process(self, inputs, inputs_two):
         #Unflattens the array
-       # print('input shape',inputs.shape)
+        #print('input shape',inputs.shape, 'self.inputshape',self.input_shape)
         return np.reshape(inputs, self.input_shape)
     
      
     def set_input_size(self, layer : Layer):
         self.input_shape = layer.output_shape
-        print('flatten input ',self.input_shape)
+       # print('flatten input ',self.input_shape)
         self.output_shape = ( self.input_shape[0] * self.input_shape[1] * self.input_shape[2], )
         self.size = self.output_shape[0]
         
@@ -330,7 +345,7 @@ class DenseLayer(Layer):
        # print(f'WEIGHTS SHAPE {self.weights.shape} BIASES SHAPE {self.biases.shape} INPUTS SHAPE {inputs.shape}')
         return np.matmul(self.weights, inputs) + self.biases
     
-    def back_process(self, inputs):
+    def back_process(self, inputs, inputs_two):
         #Unflattens the array
        # print('weights shape ',self.weights.shape, 'inputs shape ',inputs.shape)
         return np.matmul(self.weights.T, inputs)
