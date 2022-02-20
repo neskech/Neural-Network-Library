@@ -10,33 +10,28 @@ from NeuralNetwork.Model.NeuralNet import NeuralNet, Optomizer
 data, target = load_digits(n_class=3, return_X_y=True)
 scaler = StandardScaler().fit(data)
 data = scaler.transform(data)
-data = data.reshape( (data.shape[0], 1, 8, 8))
 trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, random_state=16)
 
 net = NeuralNet()
-net.add(ConvolutionLayer(num_kernels=4, func= ACT_FUNC.RELU, kernel_shape=(2,2), input_shape=(1,8,8), stride=1))
-net.add(MaxPoolLayer(shape=(2,2), stride=2))
-net.add(FlattenLayer())
-net.add(DenseLayer(size=3, func= ACT_FUNC.TANH))
-net.add(DenseLayer(size=3, func= ACT_FUNC.TANH))
+net.add(DenseLayer(size=64))
+net.add(DenseLayer(size=30, func= ACT_FUNC.TANH))
+net.add(DenseLayer(size=30, func=ACT_FUNC.TANH))
 net.add(DenseLayer(3, ACT_FUNC.SOFTMAX))
 
-net.set_hyper_params(learningRate=0.01, momentum=0.98, EWA=0.98, epsillon=0.00000001, batch_size=3)
-net.set_learningRate_settings(patience = 50, decrease= 0.5, min = 1e-7)
-net.compile(Optomizer.ADAM, Cost.CROSS_ENTROPY, accuracy_type='classification', debug=True, debug_patience=50)
+net.set_hyper_params(learningRate=0.01, momentum=0.98, EWA=0.98, epsillon=0.0000001, batch_size=3)
+net.compile(Optomizer.ADAM, Cost.CROSS_ENTROPY, accuracy_type='classification', debug=False, debug_patience=10)
 
 net.fit(trainX, trainY, numIterations=1000, numRestarts=0, numRestart_Iterations=10)
-print(net.accuracy(testX, testY))
-print(net.accuracy(trainX,trainY))
-print(net.layers[0].kernels)
+print('hello!',net.accuracy(testX, testY))
+print('hello!',net.accuracy(trainX, trainY))
 
 
 for i in range( len(testX) ) :
     output = net.evaluate(testX[i])
-    max = 0
+    min = 0
     index = 0
     for ind, val in enumerate(output):
-         if val > max:
-             max = val
+         if val < min:
+             min = val
              index = ind
-    print(f'Observed value: {testY[i]} --Predicted value: {index}')
+    #print(f'Observed value: {testY[i]} --Predicted value: {index}')

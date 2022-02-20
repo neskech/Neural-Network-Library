@@ -1,5 +1,6 @@
 
 from audioop import bias
+from cmath import cos
 from re import U
 from matplotlib import use
 from matplotlib.cbook import flatten
@@ -11,11 +12,7 @@ import random
 
 from NeuralNetwork.Layer.Layer import AvgPoolLayer, ConvolutionLayer, DenseLayer, FlattenLayer, Layer, MaxPoolLayer
 from NeuralNetwork.Model.Cost import SSR, Cost, Cross_Entropy, Cross_Entropy_Derivative, SSR_Derivative
-<<<<<<< HEAD
-from NeuralNetwork.Model.Functiions import Classification_accuracy, Regression_accuracy
-from NeuralNetwork.Model.Optomizers import Adam_Optomizer, Default_Optomizer, Optomizer
-=======
->>>>>>> 4b23bcd1 (Working ANN With New Model)
+
 
 class Optomizer(Enum):
     DEFAULT = 0
@@ -35,19 +32,6 @@ class NeuralNet:
         self.useLearningParams = False
         self.layers : list[Layer] = []
         
-<<<<<<< HEAD
-
-    
-    
-    def compile(self, optomizer, cost, accuracy, debug = False ):
-        self.debug = debug
-        self.accuracy = Classification_accuracy if accuracy else Regression_accuracy
-
-        match cost:
-            case Cost.SQUARE_RESIDUALS:
-                self.cost_function = SSR
-                self.cost_function_derivative = SSR_Derivative             
-=======
         
     def compile(self, optomizer, cost, accuracy_type,  debug = False, debug_patience = 0):
         self.debug = debug
@@ -66,7 +50,6 @@ class NeuralNet:
                 self.cost_function = SSR
                 self.cost_function_derivative = SSR_Derivative
                 
->>>>>>> 4b23bcd1 (Working ANN With New Model)
             case Cost.CROSS_ENTROPY:
                 self.cost_function = Cross_Entropy
                 self.cost_function_derivative = Cross_Entropy_Derivative
@@ -75,33 +58,21 @@ class NeuralNet:
             case Optomizer.DEFAULT:
                 self.optomizer = self.Default_Optomizer
             case Optomizer.ADAM:
-<<<<<<< HEAD
-                self.optomizer = Adam_Optomizer                             
-                dimensions = [ a.size for a in self.layers if type(a).__class__ is DenseLayer or type(a).__class__ is FlattenLayer ]
-=======
+
                 self.optomizer = self.Adam_Optomizer
                 dimensions = [ a.size for a in self.layers if type(a) is DenseLayer or type(a) is FlattenLayer ]
->>>>>>> 4b23bcd1 (Working ANN With New Model)
                 weightShapes = [ (a,b) for a,b in zip(dimensions[1:], dimensions[:-1]) ]
+                biasShapes = [ (a.size,1) for index, a in enumerate(self.layers) if type(a) is ConvolutionLayer or (type(a) is DenseLayer and index > 0)]
                 self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-                self.prev_momentum_Bias = [ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+                self.prev_momentum_Bias = [ np.zeros( a, dtype=np.float64 ) for a in biasShapes ]
                 self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-                self.prev_EXPWA_Bias =[ np.zeros( (a,1),dtype=np.float64 ) for a in dimensions[1:] ]
+                self.prev_EXPWA_Bias =[ np.zeros( a,dtype=np.float64 ) for a in biasShapes ]
 
-<<<<<<< HEAD
-                if any( [type(a).__class__ is ConvolutionLayer for a in self.layers] ):
-                    dims = [ (a.size) + a.kernel_shape for a in self.layers if type(a).__class__ is ConvolutionLayer ]
-                    self.prev_momentum_kernel = [ np.zeros(a) for a in dims ]
-                    self.prev_EXPA_kernel = [ np.zeros(a) for a in dims ]
-
-    
-=======
                 if any( [type(a) is ConvolutionLayer for a in self.layers] ):
                     dims = [ a.kernel_shape for a in self.layers if type(a) is ConvolutionLayer ]
                     self.prev_momentum_kernel = [ np.zeros(a) for a in dims ]
                     self.prev_EXPWA_kernel = [ np.zeros(a) for a in dims ]
                     
->>>>>>> 4b23bcd1 (Working ANN With New Model)
     def add(self, layer : Layer):
         self.layers.append(layer)
         if len(self.layers) > 1:
@@ -109,13 +80,13 @@ class NeuralNet:
         
 
     
-    def random_restarts(self, numIterations, numRestarts, mean = 0, SD = 1):
+    def random_restarts(self, X, Y, numIterations, numRestarts, mean = 0, SD = 1):
             costsAndSeeds = []
             for i in range( numRestarts ):
                 seed = random.randint(0,5000)
-                self.init_paramaters(mean , SD, False, seed)
+                self.init_paramaters(mean , SD, seed)
                 for j in range( numIterations ):
-                    self.optomize()
+                    self.optomizer(X, Y)
                 costsAndSeeds.append( (self.cost_function(), seed) )
 
             costsAndSeeds = sorted(costsAndSeeds, key= lambda x: x[0], reverse=True)
@@ -146,7 +117,7 @@ class NeuralNet:
              
         seed = 0
         if numRestarts != 0:
-            seed = self.random_restarts(numRestart_Iterations)
+            seed = self.random_restarts(X, Y, numRestart_Iterations, numRestart_Iterations)
         self.init_paramaters(0, 1, seed) 
         
         LR_pat = 0
@@ -154,18 +125,18 @@ class NeuralNet:
         prev_cost = 0
         for a in range(numIterations):
             if self.useLearningParams: 
-                     prev_cost = self.cost_function()
+                     prev_cost = self.cost_function(X, Y, self.evaluate)
                 
             gradientmag = self.optomizer(X, Y)
                 
             if self.useLearningParams:
-                  curr_cost = self.cost_function()
+                  curr_cost = self.cost_function(X, Y, self.evaluate)
                   if curr_cost > prev_cost: 
                       LR_pat += 1
             DB_pat += 1
 
             if self.debug and DB_pat > self.debug_patience: 
-                ##print(f' Cost :: {prev_cost} \nLearning Rate :: {self.learningRate} \n Gradient Mag :: {gradientmag}' )
+                print(f' Cost :: {prev_cost} \nLearning Rate :: {self.learningRate} \n Gradient Mag :: {gradientmag}' )
                 DB_pat = 0           
             if self.useLearningParams and LR_pat > self.lr_patience:
                      self.learn_rate = max( self.learningRate * self.lr_decrease, self.lr_min )
@@ -187,7 +158,7 @@ class NeuralNet:
         if isinstance(input, list):
           input = np.array(input, dtype=np.float64).reshape((len(input), 1))
         elif len(input.shape) == 1:
-            input = input[np.newaxis, ...]
+            input = input[..., np.newaxis]
         acts.append(input)
             
         start = 0
@@ -196,89 +167,61 @@ class NeuralNet:
         for index, layer in enumerate(self.layers[start:]):
             typeL = type(layer)
             if typeL is DenseLayer or typeL is ConvolutionLayer:
-               outputs.append(layer.process(acts[index]))
-               acts.append(layer.activate(outputs[index], use_derivative=False))                
+               outputs.append(layer.process(acts[-1]))
+               acts.append(layer.activate(outputs[-1], use_derivative=False))                
                
             elif typeL is FlattenLayer:
+                #Processing of flatten layer is just the inputs of an ANN
                 acts.append(layer.process(outputs[index-1]))
             else:
                 outputs.append(layer.process(outputs[index-1]))
 
         return outputs, acts            
     
-<<<<<<< HEAD
-    def backwards_propagation(self, cost_deriv, outputs, acts):
-        dWeights = []
-        dBiases = []
-        dKernel = []
-        indices = [ i for i in range(len(self.layers)) if type(self.layers[i]).__class__ is ConvolutionLayer or type(self.layers[i]).__class__ is DenseLayer ]
-        #Make derib indexes array for each layer with parsaters
-        for deriv_index in indices:
-            values = cost_deriv
-            
-            #Make numLayers all the actual layers
-            for k in range( self.num_layers - 2, deriv_index - 1, -1 ):  
-               #For the first iteration, check if we have activation function on final layer
-               #print(f'IN LOOP :: k -> {k} outputs[k] shape -> {outputs[k].shape} weights shape -> {self.weights[k].shape} values shape -> {values.shape}')
-               if self.use_last_activation or k < self.num_layers - 2:
-                    act_deriv = np.zeros( outputs[k].shape )
-                    for a in range( len(act_deriv) ):
-                         act_deriv[a][0] = self.activation_deriv( outputs[k][a,0] )     
-                         
-                    values = np.multiply(values, act_deriv)
-                    
-               if k != deriv_index:
-                   values = np.matmul( self.weights[k].T, values )
-                  
-            dBiases.append( values ) 
-            #print(f'VALUES SHAPE {values.shape} AND ACTS SHAPE {acts[deriv_index].shape} AND DERIV INDEX {deriv_index}')
-            dWeights.append( np.matmul(values, acts[deriv_index].T ) )
-    
-=======
-    def backwards_propagation(self, outputs, acts, cost_deriv):
+
+    def backwards_propagation(self, outputs, acts, cost_deriv, predicted_index):
         dbiases = []
         dweights = []
         dkernels = []
-        #print('START ', acts[1])
+        ##print('START ', acts[1])
         
-        deriv_indices = [i for i in range(len(self.layers[:-1])) if type(self.layers[i]) is ConvolutionLayer or type(self.layers[i]) is DenseLayer]
-        first_dense_layer_index = -1
-        for index, layer in enumerate(self.layers):
-            if type(layer) is DenseLayer:
-                first_dense_layer_index = index
-                break
+        deriv_indices = [i for i in range(len(self.layers[:-1])) if type(self.layers[i]) is ConvolutionLayer or type(self.layers[i]) is DenseLayer or type(self.layers[i]) is FlattenLayer]
+
          
-        ##print('DERIV INDEX ', deriv_indices, 'FIRST ',first_dense_layer_index)   
+        #print('DERIV INDEX ', deriv_indices, 'FIRST ',first_dense_layer_index)   
         for deriv_index in deriv_indices:
             values = cost_deriv
-            ##print('DERIVVVV ',deriv_index)
-            for k in range(self.num_layers - 1, deriv_index , -1):
+            ###print('DERIVVVV ',deriv_index)
+            for k in range(self.num_layers - 1, deriv_index, -1):
                 typeL = type(self.layers[k])
+                #print('index ',k,'layer type',typeL.__class__.__name__,'Values shape ',values.shape)
                 if typeL is DenseLayer or typeL is ConvolutionLayer:
-                    act_deriv = self.layers[k].activate(outputs[k-1],use_derivative=True)
-                    ##print('ACT DERIV ',act_deriv)
+                    act_deriv = self.layers[k].activate(outputs[k-1], predicted_index, use_derivative=True)
+                    #print('act deriv shape',act_deriv.shape)
+                    ###print('ACT DERIV ',act_deriv)
                     if not act_deriv is None:
                          values = np.multiply(act_deriv, values)
                 
                 if k != deriv_index + 1:
                     values = self.layers[k].back_process(values)
-                    ##print('RESULT ',values)
+                    ###print('RESULT ',values)
                     
             #If it its a weight we're finding the deriv of
-            if deriv_index >= first_dense_layer_index:
-                ##print('YEYEYE', [a.shape for a in dweights], 'FINAL ',values, 'ACTS ',acts[deriv_index].T.shape)
-                #print('HHEHEHE',deriv_index, ' ', values, ' ACTS ', acts[1] )
+            #TODO just do if type( self.layers[derive_index] ) is DenseLayer
+            typeL = type(self.layers[deriv_index])
+            if typeL is DenseLayer or typeL is FlattenLayer:
+                ###print('YEYEYE', [a.shape for a in dweights], 'FINAL ',values, 'ACTS ',acts[deriv_index].T.shape)
+                ##print('HHEHEHE',deriv_index, ' ', values, ' ACTS ', acts[1] )
                 dbiases.append(values)
                 dweights.append(np.matmul(values, acts[deriv_index].T))
             #Else its a convolution layer
             else:
-                ##print('NONO')
-                bias, kernel = self.layers[deriv_index].derive(values)
+                ###print('NONO')
+                kernel, bias = self.layers[deriv_index].derive(values, acts[deriv_index])
                 dbiases.append(bias)
                 dkernels.append(kernel)
             
         return dweights, dbiases, dkernels    
->>>>>>> 4b23bcd1 (Working ANN With New Model)
     
     def freeMemory(self):
          for layer in self.layers:
@@ -294,10 +237,10 @@ class NeuralNet:
     
     
     def evaluate(self, inputs, argMax : bool = False):
-        values = None
+        values = inputs
         if isinstance(inputs, list):
             values = np.array(inputs, dtype=np.float64).reshape( ( len(inputs), 1) )
-        else:
+        elif len(inputs.shape) != 3:
            values = inputs.reshape( (inputs.size, 1) )
 
         start = 0
@@ -305,7 +248,7 @@ class NeuralNet:
             start = 1
             
         for index, layer in enumerate(self.layers[start:]):
-            ##print(values, index, layer.weights.shape)
+            ###print(values, index, layer.weights.shape)
             values = layer.process(values)
             values = layer.activate(values, use_derivative=False)
 
@@ -329,10 +272,17 @@ class NeuralNet:
         count = 0
         for input_set, output_index in zip(testX, testY):
             output = self.evaluate(input_set)
-            indexO = np.where( output == max(output) )
-            count += 1 if  indexO == output_index else 0
+            
+            max = 0
+            index = 0
+            for ind, val in enumerate(output):
+                if val > max:
+                    max = val
+                    index = ind
+                    
+            count += 1 if  index == output_index else 0
 
-        return count / len(self.trainY)
+        return count / len(testY)
      
 
     def Regression_accuracy(self, testX, testY):      
@@ -341,7 +291,7 @@ class NeuralNet:
              output = self.evaluate(input_set)[0]
              sum += (output - output_set) ** 2
 
-        return np.sqrt(sum) / len(self.trainY)
+        return np.sqrt(sum) / len(testY)
     
 
 
@@ -355,8 +305,8 @@ class NeuralNet:
         avgD_weights = [ np.zeros(a.weights.shape, dtype=np.float64) for a in self.layers[1:] if type(a) is DenseLayer ]
         avgD_biases = [ np.zeros((a.size,1), dtype=np.float64) for index, a in enumerate(self.layers) if (type(a) is DenseLayer and index > 0) or type(a) is ConvolutionLayer ]
         avgD_kernels = [ np.zeros(a.kernel_shape, dtype=np.float64) for a in self.layers if type(a) is ConvolutionLayer ]
-        print([a.shape for a in avgD_weights])
-        print([a.shape for a in avgD_biases])
+       # #print([a.shape for a in avgD_weights])
+       # #print([a.shape for a in avgD_biases])
         
         rand_data_points = np.random.randint(0, len(X), size=self.batch_size)
         for i in rand_data_points:
@@ -364,11 +314,13 @@ class NeuralNet:
            outputs, acts = self.forward_propagation(inputs)
            
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
-           ##print('COST DERIV',cost_deriv)
-           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, cost_deriv)
-           ##print([a.shape for a in dweights])
-           ##print([a.shape for a in avgD_weights])
-           ##print('BIASES ', [a.shape for a in dbiases])
+           ###print('COST DERIV',cost_deriv)
+           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=Y[i], cost_deriv=cost_deriv)
+           ###print([a.shape for a in dweights])
+           ###print([a.shape for a in avgD_weights])
+           ###print('BIASES ', [a.shape for a in dbiases])
+           #print('bias shapes',[a.shape for a in dbiases])
+           #print('avg bias shape',[a.shape for a in avgD_biases])
            
            for a in range( len(dweights) ):
                avgD_weights[a] += dweights[a]
@@ -385,8 +337,10 @@ class NeuralNet:
                avgD_kernels[a] /= self.batch_size
         
         mag = 0
-        weight_indices = [i+1 for i in range(len(self.layers[1:])) if type(self.layers[i]) is DenseLayer]
-        print('WEIGHT INDICES ',weight_indices)
+        add = 0
+        if type(self.layers[0]) is DenseLayer: add = 1
+        weight_indices = [i+add for i in range(len(self.layers[add:])) if type(self.layers[i]) is DenseLayer]
+        #print('WEIGHT INDICES ',weight_indices)
         index = 0
         for a in range( len(avgD_weights) ):
             
@@ -397,8 +351,8 @@ class NeuralNet:
             
             changeW =  self.momentum * self.prev_momentum_Weight[a] + (1 - self.momentum) * avgD_weights[a]
             self.layers[ weight_indices[index] ].weights -= np.multiply(changeW, lr_matrix)
-            print('change @w', changeW)
-            print('avg d @w ',avgD_weights)
+           # #print('change @w', changeW)
+           # #print('avg d @w ',avgD_weights)
             index += 1
             self.prev_momentum_Weight[a] = changeW
             self.prev_EXPWA_Weight[a] = EXPWA_Weight
@@ -406,6 +360,7 @@ class NeuralNet:
             if self.debug: mag += np.sum( np.square(changeW) )
           
         bias_indices = [i for i in range(len(self.layers)) if (type(self.layers[i]) is DenseLayer and i > 0) or type(self.layers[i]) is ConvolutionLayer]
+        #print('bias indices',bias_indices)
         index = 0
         for b in range( len(avgD_biases) ):  
             EXPWA_Bias = self.EXPWA * self.prev_EXPWA_Bias[b] + (1 - self.EXPWA) * np.square(avgD_biases[b])
@@ -429,7 +384,7 @@ class NeuralNet:
             lr_matrix.fill(self.learningRate)
             lr_matrix =  np.divide(lr_matrix,  np.sqrt( (EXPWA_Kernel + self.epsillon) ) )
             
-            changeK =  self.momentum * self.prev_momentum_kernel[b] + (1 - self.momentum) * avgD_kernels[c] 
+            changeK =  self.momentum * self.prev_momentum_kernel[c] + (1 - self.momentum) * avgD_kernels[c] 
             self.layers[ kernel_indices[index] ].kernels -= np.multiply(changeK, lr_matrix)
             index += 1
             self.prev_momentum_kernel[c] = changeK
@@ -445,10 +400,10 @@ class NeuralNet:
 
     def Default_Optomizer(self, X, Y): 
         avgD_weights = [ np.zeros(a.weights.shape, dtype=np.float64) for a in self.layers[1:] if type(a) is DenseLayer ]
-        avgD_biases = [ np.zeros((a.size,1), dtype=np.float64) for index, a in enumerate(self.layers) if (type(a) is DenseLayer and index > 0) or type(a) is ConvolutionLayer ]
+        avgD_biases = [ np.zeros((a.biases.shape), dtype=np.float64) for index, a in enumerate(self.layers) if (type(a) is DenseLayer and index > 0) or type(a) is ConvolutionLayer ]
         avgD_kernels = [ np.zeros(a.kernel_shape, dtype=np.float64) for a in self.layers if type(a) is ConvolutionLayer ]
-        print([a.shape for a in avgD_weights])
-        print([a.shape for a in avgD_biases])
+       # #print([a.shape for a in avgD_weights])
+       # #print([a.shape for a in avgD_biases])
         
         rand_data_points = np.random.randint(0, len(X), size=self.batch_size)
         for i in rand_data_points:
@@ -456,8 +411,8 @@ class NeuralNet:
            outputs, acts = self.forward_propagation(inputs)
            
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
-           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, cost_deriv)
-           
+           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=Y[i], cost_deriv=cost_deriv)
+
            for a in range( len(dweights) ):
                avgD_weights[a] += dweights[a]
            for a in range( len(dbiases) ):
@@ -474,13 +429,13 @@ class NeuralNet:
         
         mag = 0
         weight_indices = [i+1 for i in range(len(self.layers[1:])) if type(self.layers[i]) is DenseLayer]
-        print('WEIGHT INDICES ',weight_indices)
+       # #print('WEIGHT INDICES ',weight_indices)
         index = 0
         for a in range( len(avgD_weights) ):
             
             changeW = avgD_weights[a] * self.learningRate
             self.layers[ weight_indices[index] ].weights -= changeW
-            print(changeW)
+           # #print(changeW)
             index += 1
 
             if self.debug: mag += np.sum( np.square(changeW) )

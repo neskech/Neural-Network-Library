@@ -21,16 +21,18 @@ def SSR_Derivative(X, Y, data_index, output_values):
     return matrix
 
 def Cross_Entropy(X, Y, evaluate):
+       rand_data_points = np.random.randint(0, len(X), size=5)
        sum = 0
-       for a in range( len(X) ):
+       for a in  rand_data_points :
            predicted = evaluate(X[a])
-           index = np.where( max(predicted) == predicted )
+           index = Y[a]
            sum += -np.log(predicted[index])
        return sum
 
 def Cross_Entropy_Derivative(X, Y, data_index, output_values):
-       matrix = np.zeros( (len(output_values), 1), dtype=np.float64 )
+       matrix = np.ones( (len(output_values), 1), dtype=np.float64 )
+       return matrix
        for a in range( len(output_values) ):
-           index = np.where( max(output_values) == output_values )
+           index = Y[data_index]
            matrix[a,0] = -1 / output_values[index,0]
        return matrix
