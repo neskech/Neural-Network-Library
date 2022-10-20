@@ -66,7 +66,7 @@ class NeuralNet:
                 self.prev_momentum_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
                 self.prev_momentum_Bias = [ np.zeros( a, dtype=np.float64 ) for a in biasShapes ]
                 self.prev_EXPWA_Weight = [ np.zeros(a,dtype=np.float64) for a in weightShapes ]
-                self.prev_EXPWA_Bias =[ np.zeros( a,dtype=np.float64 ) for a in biasShapes ]
+                self.prev_EXPWA_Bias = [ np.zeros( a,dtype=np.float64 ) for a in biasShapes ]
 
                 if any( [type(a) is ConvolutionLayer for a in self.layers] ):
                     dims = [ a.kernel_shape for a in self.layers if type(a) is ConvolutionLayer ]
@@ -395,8 +395,7 @@ class NeuralNet:
              
             if self.debug: mag += np.sum( np.square(changeK) )
             
-        if self.debug: print(f'GRADIENT MAG :: {np.sqrt(mag)}')
-
+        return mag
 
 
 

@@ -85,7 +85,6 @@ class ConvolutionLayer(Layer):
           #3D Output. 3rd dimension is for the amount of kernels we have, the 2D is the result of one kernel convolution
           self.output_shape = (self.size, int( (self.input_shape[1] - self.kernel_shape[1]) / self.stride + 1 ), int( (self.input_shape[2] - self.kernel_shape[2]) / self.stride + 1 ) )
           self.biases = np.zeros(shape = (self.size,1), dtype=np.float64)
-          print('Conv output shape',self.output_shape)
             
         
      def init_rand_params(self, seed : int, mean : float = 0, SD : float = 1):
