@@ -1,5 +1,3 @@
-__pycache__/
-ImageParse/__pycache__/
-NeuralNetowrk/__pycache__/
-.Ds_Store
+**/__pycache__/
+*.Ds_Store
 
