@@ -1,4 +1,4 @@
-from Layer import Layer, ACT_FUNC
+from .Layer import Layer, ACT_FUNC
 import numpy as np
 
 class ConvolutionLayer(Layer):
@@ -33,7 +33,6 @@ class ConvolutionLayer(Layer):
         if inputs.shape != self.input_shape:
             raise Exception(f'ERROR: In convolution.process() - Input array shape {inputs.shape} does not match required input shape of {self.input_shape}')
            
-        #print(self.output_shape) 
         output = np.zeros( self.output_shape )
         #Loop for each kernel, no need to loop through the third dimension of the kernels since its constant
         for depth in range( self.size ):
@@ -58,14 +57,11 @@ class ConvolutionLayer(Layer):
         if inputs.shape != self.output_shape:
             raise Exception(f'ERROR: In convolution.back_process() - Input array shape {inputs.shape} does not match required input shape of {self.input_shape}') 
            
-       # print('BACK PROCESS  INPUTS SHAPE', inputs.shape) 
-        inputs = np.pad(inputs,pad_width=( (0, 0), (1,1), (1,1) ))      
-        #print('BACK PROCESS  INPUTS SHAPE PADDING', inputs.shape)      
+        inputs = np.pad(inputs,pad_width=( (0, 0), (1,1), (1,1) ))        
         output = np.zeros( self.input_shape )
         #Axis 0 is the number of kernels
         rKernels = np.rot90(self.kernels, axes=(1,2))
         rKernels = np.rot90(rKernels, axes=(1,2))
-       # print(rKernels.shape, 'KENRNENENEL',self.kernels.shape)
         #Loop for each kernel, no need to loop through the third dimension of the kernels since its constant
         for depth in range( self.input_shape[0] ):
               for a in range(0, self.input_shape[1], self.stride):

@@ -7,7 +7,7 @@ from audioop import bias
 from sqlalchemy import desc
 from NeuralNetwork.Layer.Layer import ACT_FUNC, DenseLayer
 from NeuralNetwork.Model.Cost import Cost, SSR_Derivative
-from NeuralNetwork.Model.NeuralNet import NeuralNet, Optomizer
+from NeuralNetwork.Model.Model import NeuralNet, Optomizer
 import numpy as np
 
 

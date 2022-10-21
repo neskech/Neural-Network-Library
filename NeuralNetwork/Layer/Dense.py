@@ -1,4 +1,4 @@
-from Layer import Layer, ACT_FUNC
+from .Layer import Layer, ACT_FUNC
 import numpy as np
 
 class DenseLayer(Layer):
@@ -18,12 +18,10 @@ class DenseLayer(Layer):
                      self.weights[a,b] = np.random.normal(mean, SD)
                      
     def process(self, inputs):
-       # print(f'WEIGHTS SHAPE {self.weights.shape} BIASES SHAPE {self.biases.shape} INPUTS SHAPE {inputs.shape}')
         return np.matmul(self.weights, inputs) + self.biases
     
     def back_process(self, inputs, inputs_two):
         #Unflattens the array
-       # print('weights shape ',self.weights.shape, 'inputs shape ',inputs.shape)
         return np.matmul(self.weights.T, inputs)
              
     def set_input_size(self, layer : Layer):

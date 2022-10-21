@@ -41,15 +41,27 @@ def hyperbolic_tangent(input, predicted_index):
     return matrix
 
 def softMax(matrix, predicted_index):
-    output = np.zeros( matrix.shape )
-    for a in range( matrix.shape[0] ):
+    output = np.zeros(matrix.shape)
+    
+    denom = 0
+    for a in range(matrix.shape[0]):
+        denom += np.e ** matrix[a, 0]
+        
+    for a in range(matrix.shape[0]):
         numerator = np.e ** matrix[a,0]
-        denom = 0
-        for b in range( matrix.shape[0] ):
-            denom += np.e ** matrix[b,0]
         output[a,0] = numerator / denom
      
     return output
+
+def argMax(input): 
+    max_ = input[0, 0]
+    maxidx
+    for a in range(input.shape[0]):
+        if input[a, 0] > max_:
+            max_ = input[a, 0]
+            maxidx = a
+    return maxidx
+    
             
 
 def Relu_Deriv(input, predicted_index):
@@ -84,23 +96,13 @@ def hyperbolic_tangent_Deriv(input, predicted_index):
    return matrix
 
 def softMax_Deriv(input, predicted_index):
-    
-    matrix = np.zeros( input.shape)
-    for a in range( len(input)  ):
-             if a == predicted_index:
-                 matrix[a,0] = input[a,0] - 1
-             else:
-                 matrix[a,0] = input[a,0]
-    return matrix
-     
-     
+    #input is not softmaxed
+    input = softMax(input, predicted_index)
     matrix = np.zeros(input.shape)
-    print('SOFTMAX DERIV SHAPE ',matrix.shape)
     for a in range(input.shape[0]):
         if a == predicted_index:
             matrix[a,0] = input[predicted_index,0] * (1 - input[predicted_index,0])
         else:
             matrix[a,0] = -input[predicted_index,0] * input[a,0]
-    print(matrix)
     return matrix
    

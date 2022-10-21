@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as py
 from enum import Enum
+from time import time
 import random
+from .Activations import argMax
 from NeuralNetwork.Layer.Layer import Layer
 from NeuralNetwork.Layer.Misc import AvgPoolLayer, MaxPoolLayer, FlattenLayer
 from NeuralNetwork.Layer.Conv import ConvolutionLayer
 from NeuralNetwork.Layer.Dense import DenseLayer
-from NeuralNetwork.Model.Cost import SSR, Cost, Cross_Entropy, Cross_Entropy_Derivative, SSR_Derivative
+from NeuralNetwork.Model.Cost import Square_Residuals, Cost, Cross_Entropy, Cross_Entropy_Derivative, Square_Residuals_Derivative
 
 
 class Optomizer(Enum):
@@ -17,7 +19,7 @@ class AccuracyTP(Enum):
     REGRESSION = 0
     CLASSIFICATION = 1
 
-class NeuralNet:
+class Model:
     
     def __init__(self):
         #Learning Rate Tuning / Scheduling
@@ -93,17 +95,17 @@ class NeuralNet:
         #set function pointers for accuracy
         match accuracy_type:
             case AccuracyTP.REGRESSION:
-                self.accuracy = self.Regression_accuracy
+                self.accuracy = self.loss_on_dataset
             case AccuracyTP.CLASSIFICATION:
-                self.accuracy = self.Classification_accuracy
+                self.accuracy = self.classification_accuracy
             case _:
                 raise Exception(f'ERROR: \'{accuracy_type}\' is not supported')
         
         #set function pointers for loss function
         match loss_function:
             case Cost.SQUARE_RESIDUALS:
-                self.cost_function = SSR
-                self.cost_function_derivative = SSR_Derivative
+                self.cost_function = Square_Residuals
+                self.cost_function_derivative = Square_Residuals_Derivative
                 
             case Cost.CROSS_ENTROPY:
                 self.cost_function = Cross_Entropy
@@ -181,7 +183,50 @@ class NeuralNet:
             costsAndSeeds = sorted(costsAndSeeds, key=lambda x: x[0], reverse=True)
             return costsAndSeeds[0][1]
     
+     
+    def evaluate(self, inputs, argMax : bool = False):
+        """Evaluates the Model on a Given Input
+
+        Args:
+            inputs (_type_): Input Matrix to the Model
+            argMax (bool, optional): Whether to Argmax the Output. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        values = inputs
+        
+        #If the input is a list, convert it to a numpy array
+        if isinstance(inputs, list):
+            values = np.array(inputs, dtype=np.float64).reshape((len(inputs), 1))
+        elif len(inputs.shape) == 1:
+           #Add a new axis to the input, making it a column vector and not just a flat list
+           values = inputs.reshape((inputs.size, 1))
+
+        start = 0
+        if type(self.layers[0]) is DenseLayer:
+            start = 1
             
+        #Process the inputs through the network
+        for index, layer in enumerate(self.layers[start:]):
+            values = layer.process(values)
+            values = layer.activate(values, use_derivative=False)
+
+        values.reshape(values.shape[0], 1)
+        
+        #Apply argmax
+        if argMax:
+            max = values[0]
+            maxDex = 0
+            for index, a in enumerate(values):
+                if a > max:
+                    max = a
+                    maxDex = index
+                    
+            return maxDex
+        
+        return values
+           
     def train(self, trainX, trainY, epochs, num_restarts = 0, restart_Epochs = 5):
         """Trains the Model On A Given Dataset
 
@@ -213,7 +258,10 @@ class NeuralNet:
         self.loss_metrics.clear()
         self.gradient_mag_metrics.clear()
         
-        for _ in range(epochs):
+        cumulative_time = 0
+        for e in range(epochs):
+            
+            start_time = time()
             
             #If Tuning is enabled, want to compare the previous loss to the loss after back propogation
             if self.useLearningRateTuning: 
@@ -236,7 +284,9 @@ class NeuralNet:
 
             #print debug information
             if self.debug and db_pat > self.debug_patience: 
-                print(f'Cost :: {curr_cost} \nLearning Rate :: {self.learning_rate} \n Gradient Mag :: {gradientmag}')
+                diff = time() - start_time
+                cumulative_time += diff
+                print(f'Epoch #{e} || Loss :: {curr_cost} || Gradient Mag: {gradientmag} || Avg Time Per Epoch: {cumulative_time / (e + 1):.8f}s')
                 db_pat = 0          
                  
             if self.useLearningRateTuning and lr_pat > self.lr_patience:
@@ -331,9 +381,9 @@ class NeuralNet:
                             or type(self.layers[i]) is FlattenLayer
                         ]
 
-        shift = 0 
+        shift = 1
         if type(self.layers[0]) is ConvolutionLayer:
-            shift = 1
+            shift = 0
  
         for deriv_index in deriv_indices:
             #The start of backprop is with the loss function derivative
@@ -363,51 +413,7 @@ class NeuralNet:
                 dbiases.append(bias)
                 dkernels.append(kernel)
             
-        return dweights, dbiases, dkernels    
-    
-    def evaluate(self, inputs, argMax : bool = False):
-        """Evaluates the Model on a Given Input
-
-        Args:
-            inputs (_type_): Input Matrix to the Model
-            argMax (bool, optional): Whether to Argmax the Output. Defaults to False.
-
-        Returns:
-            _type_: _description_
-        """
-        values = inputs
-        
-        #If the input is a list, convert it to a numpy array
-        if isinstance(inputs, list):
-            values = np.array(inputs, dtype=np.float64).reshape((len(inputs), 1))
-        elif len(inputs.shape) == 1:
-           #Add a new axis to the input, making it a column vector and not just a flat list
-           values = inputs.reshape((inputs.size, 1))
-
-        start = 0
-        if type(self.layers[0]) is DenseLayer:
-            start = 1
-            
-        #Process the inputs through the network
-        for index, layer in enumerate(self.layers[start:]):
-            values = layer.process(values)
-            values = layer.activate(values, use_derivative=False)
-
-        values.reshape(values.shape[0], 1)
-        
-        #Apply argmax
-        if argMax:
-            max = values[0]
-            maxDex = 0
-            for index, a in enumerate(values):
-                if a > max:
-                    max = a
-                    maxDex = index
-                    
-            return maxDex
-        
-        return values
-              
+        return dweights, dbiases, dkernels                 
 
    
     def classification_accuracy(self, testX, testY) -> float:
@@ -480,8 +486,15 @@ class NeuralNet:
            
            #Retrieve the cost derivative needed for backprop
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
+           
+           p_idx = None
+           if len(Y.shape) > 1:
+                p_idx = argMax(Y[i])
+           else:
+               p_idx = Y[i]
+               
            #Retrieve the gradients
-           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=Y[i], cost_deriv=cost_deriv)
+           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=p_idx, cost_deriv=cost_deriv)
            
            #Add these gradients to our averages
            for a in range( len(dweights) ):
@@ -502,7 +515,7 @@ class NeuralNet:
         
         mag = 0 #Gradient Magnitude
         
-        add = 0 #TODO ????
+        add = 0
         if type(self.layers[0]) is DenseLayer: 
             add = 1
         
@@ -590,8 +603,15 @@ class NeuralNet:
            
            #Retrieve the cost derivative needed for backprop
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
+           
+           p_idx = None
+           if len(Y.shape) > 1:
+                p_idx = argMax(Y[i])
+           else:
+               p_idx = Y[i]
+               
            #Retrieve the gradients
-           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=Y[i], cost_deriv=cost_deriv)
+           dweights, dbiases, dkernels = self.backwards_propagation(outputs, acts, predicted_index=p_idx, cost_deriv=cost_deriv)
 
            #Add these gradients to our averages
            for a in range( len(dweights) ):

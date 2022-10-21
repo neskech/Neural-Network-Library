@@ -12,6 +12,7 @@ class ACT_FUNC(Enum):
     NONE = 5
     
 
+#BASE CLASS
 class Layer:
     def __init__(self, size : int, func : ACT_FUNC) -> None:
         self.size = size
@@ -19,6 +20,10 @@ class Layer:
         self.output_shape = None
         self.input_shape = None
         self.setActivation(func)
+    
+    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###
+    #OVERWRITTEN METHODS
+    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###    ###
     
     def process(self, inputs):
         pass
@@ -40,11 +45,14 @@ class Layer:
          elif use_derivative and predicted_index == -1:
              raise Exception('ERROR: You\'re using the derivative but have a pred index of -1')
          if not use_derivative:
+             #predicted index for softmax and cross entropy
              return self.activation(inputs, predicted_index)
          else:
+             #predicted index for softmax and cross entropy
              return self.activation_derivative(inputs, predicted_index)
          
     def setActivation(self, func : ACT_FUNC):
+        #Activation Function Function Pointers
         if func is ACT_FUNC.RELU:
             self.activation = acts.Relu
             self.activation_derivative = acts.Relu_Deriv
@@ -64,9 +72,9 @@ class Layer:
         elif func is ACT_FUNC.SOFTMAX:
             self.activation = acts.softMax
             self.activation_derivative = acts.softMax_Deriv
-            
-        else:
-            raise Exception('ERROR: Unknown / unsupported Activation Function')
+                  
+        #else:
+           # raise Exception('ERROR: Unknown / unsupported Activation Function')
 
 
       

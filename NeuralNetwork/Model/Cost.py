@@ -1,5 +1,6 @@
 
 from enum import Enum
+from .Activations import argMax
 import numpy as np
 
 class Cost(Enum):
@@ -31,9 +32,14 @@ def Cross_Entropy(X, Y, evaluate):
 
 #TODO WTF IS THIS 
 def Cross_Entropy_Derivative(X, Y, data_index, output_values):
-       matrix = np.ones( (len(output_values), 1), dtype=np.float64 )
-       return matrix
+       matrix = np.zeros((len(output_values), 1), dtype=np.float64)
+       
+       idx = None
+       if len(Y.shape) > 1:
+          idx = argMax(Y[data_index])
+       else:
+          idx = Y[data_index]
+          
        for a in range( len(output_values) ):
-           index = Y[data_index]
-           matrix[a,0] = -1 / output_values[index,0]
+           matrix[a,0] = -1 / (output_values[idx,0] + 1e-8)
        return matrix

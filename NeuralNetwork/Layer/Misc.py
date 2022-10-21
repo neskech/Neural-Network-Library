@@ -1,4 +1,4 @@
-from Layer import Layer
+from .Layer import Layer
 import numpy as np
 
 class MaxPoolLayer(Layer):
@@ -36,14 +36,12 @@ class MaxPoolLayer(Layer):
                 
                     val = input[depth, a // self.shape[0], b // self.shape[1]] 
                     subSection = inputs_two[depth, a : a + self.shape[0] , b : b + self.shape[1]]
-                  #  print('sub shape',subSection.shape, 'maxPool shape',self.shape, 'index',(a,b), 'output shape', self.output_shape,  'output array shape', output.shape, 'input shape',self.input_shape, 'inputs array shape',input.shape, 'inoputs two shape ',inputs_two.shape)
                     max = np.max(subSection)
                     
                     max_index = -1
                     for i in range(self.shape[0]):
                         for j in range(self.shape[1]):
                             if max == inputs_two[depth, a + i, b + j]:
-                              #  print('FOUND IT1')
                                 max_index = (i,j)
                                 break
                         else:
@@ -63,8 +61,6 @@ class MaxPoolLayer(Layer):
           #The 3rd dimension from the last layer is maintained
           self.size = layer.output_shape[0]
           self.output_shape = (layer.output_shape[0], int( (self.input_shape[1] - self.shape[0]) / self.stride + 1 ), int( (self.input_shape[2] - self.shape[1]) / self.stride + 1) )
-        #  print('max pool input shape',self.input_shape)
-        #  print('max pool output shape',self.output_shape)
 
 class AvgPoolLayer(Layer):
     def __init__(self, shape, stride : int) -> None:
@@ -123,13 +119,11 @@ class FlattenLayer(Layer):
      
     def back_process(self, inputs, inputs_two):
         #Unflattens the array
-        #print('input shape',inputs.shape, 'self.inputshape',self.input_shape)
         return np.reshape(inputs, self.input_shape)
     
      
     def set_input_size(self, layer : Layer):
         self.input_shape = layer.output_shape
-       # print('flatten input ',self.input_shape)
         self.output_shape = ( self.input_shape[0] * self.input_shape[1] * self.input_shape[2], )
         self.size = self.output_shape[0]
   

@@ -2,11 +2,10 @@
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_digits
 from sklearn.preprocessing import StandardScaler
-from ImageParse.Parser import getData
-from NeuralNetwork.Layer.Layer import ACT_FUNC, AvgPoolLayer, ConvolutionLayer, DenseLayer, FlattenLayer, MaxPoolLayer
+from NeuralNetwork.Layer.Layer import ACT_FUNC,  ConvolutionLayer, DenseLayer, FlattenLayer, MaxPoolLayer
 from NeuralNetwork.Model.Cost import Cost
 
-from NeuralNetwork.Model.NeuralNet import NeuralNet, Optomizer
+from NeuralNetwork.Model.Model import Model, Optomizer
 
 
 data, target = load_digits(n_class=3, return_X_y=True)
@@ -16,7 +15,7 @@ data = data.reshape( (data.shape[0], 1, 8, 8))
 trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, random_state=16)
 print(trainY.shape)
 
-net = NeuralNet()
+net = Model()
 net.add(ConvolutionLayer(num_kernels=3, func= ACT_FUNC.RELU, kernel_shape=(2,2), input_shape=(1, 8, 8), stride=1))
 net.add(MaxPoolLayer(shape=(2,2), stride=1))
 net.add(FlattenLayer())
