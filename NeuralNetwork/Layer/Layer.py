@@ -73,7 +73,9 @@ class Layer:
             self.activation = acts.softMax
             self.activation_derivative = acts.softMax_Deriv
                   
-        #else:
+        else:
+           self.activation = None
+           self.activation_derivative = None
            # raise Exception('ERROR: Unknown / unsupported Activation Function')
 
 

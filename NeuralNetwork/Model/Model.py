@@ -240,9 +240,9 @@ class Model:
         
         #If the dataset isn't in the form of a numpy array
         if isinstance(trainX, list):
-            X = np.array(X, dtype=np.float64).reshape( (len(X),1) )
+             trainX = np.array(trainX, dtype=np.float64).reshape( (len(trainX),1) )
         if isinstance(trainY, list):
-             Y = np.array(Y, dtype=np.float64).reshape( (len(Y),1) )
+             trainY = np.array(trainY, dtype=np.float64).reshape( (len(trainY),1) )
             
         #Grab a seed from random restarts 
         seed = random.randint(0,5000)
@@ -322,7 +322,7 @@ class Model:
         """Displays Gradient Magnitude Metrics After Training
         """
         py.xlabel("Epoch")
-        py.ylabel("Gradient Mag")
+        py.ylabel("Gradient Magnitude")
         py.plot(self.gradient_mag_metrics)
         py.show()
     
@@ -488,7 +488,7 @@ class Model:
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
            
            p_idx = None
-           if len(Y.shape) > 1:
+           if len(Y.shape) > 1 and Y[0].shape[0] > 1:
                 p_idx = argMax(Y[i])
            else:
                p_idx = Y[i]
@@ -605,7 +605,7 @@ class Model:
            cost_deriv =  self.cost_function_derivative(X, Y, data_index=i, output_values = acts[-1])
            
            p_idx = None
-           if len(Y.shape) > 1:
+           if len(Y.shape) > 1 and Y[0].shape[0] > 1:
                 p_idx = argMax(Y[i])
            else:
                p_idx = Y[i]

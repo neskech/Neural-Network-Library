@@ -24,7 +24,6 @@ net.add(DenseLayer(10, ACT_FUNC.SOFTMAX))
 
 net.set_hyper_params(learning_rate=0.006, batch_size=4, momentum=0.80, momentum2=0.80, epsillon=0.0000001)
 net.compile(Optomizer.ADAM, Cost.CROSS_ENTROPY, AccuracyTP.CLASSIFICATION, debug=True, debug_patience=10)
-print(trainY[101], "HAHHAHHAHAHA")
 net.train(trainX, trainY, epochs=5000)
 
 print(f'Training accuracy {net.accuracy(trainX, trainY)}')

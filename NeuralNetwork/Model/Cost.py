@@ -11,8 +11,8 @@ def Square_Residuals(X, Y, evaluate):
      sum = 0
      for i in range( len(X) ):
             predicted = evaluate(X[i])
-            for _ in range( predicted.shape[1] ):
-                sum += ( Y[i] - predicted ) ** 2
+            for a in range( predicted.shape[1] ):
+                sum += ( Y[i, 0] - predicted[a, 0] ) ** 2
      return sum
 
 def Square_Residuals_Derivative(X, Y, data_index, output_values):
