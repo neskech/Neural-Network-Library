@@ -1,5 +1,3 @@
-
-import itertools
 import numpy as np
 from enum import Enum
 
@@ -25,6 +23,7 @@ def softPlus(input, predicted_index):
             val = val = np.clip(x, -15, 15)
             y[...] = np.log( 1 + np.e ** val )
      return matrix       
+ 
 def sigmoid(input, predicted_index):
      matrix = np.zeros(input.shape)
      with np.nditer([input, matrix], op_flags=['readwrite']) as it:
@@ -32,6 +31,7 @@ def sigmoid(input, predicted_index):
             val = val = np.clip(x, -15, 15)
             y[...] = 1  / ( 1 + np.e ** -val )
      return matrix
+ 
 def hyperbolic_tangent(input, predicted_index):
     matrix = np.zeros(input.shape)
     with np.nditer([input, matrix], op_flags=['readwrite']) as it:
@@ -39,6 +39,7 @@ def hyperbolic_tangent(input, predicted_index):
             val = val = np.clip(x, -15, 15)
             y[...] = ( np.e ** val - np.e ** -val) / ( np.e ** val + np.e ** -val)
     return matrix
+
 def softMax(matrix, predicted_index):
     output = np.zeros( matrix.shape )
     for a in range( matrix.shape[0] ):
@@ -65,6 +66,7 @@ def softPlus_Deriv(input, predicted_index):
            val  = np.clip(x, -15, 15)
            y[...] = (np.e ** val) / ( 1 + np.e ** val )
      return matrix
+ 
 def sigmoid_Deriv(input, predicted_index):
     matrix = np.zeros(input.shape)
     with np.nditer([input, matrix], op_flags=['readwrite']) as it:
@@ -72,6 +74,7 @@ def sigmoid_Deriv(input, predicted_index):
            val  = np.clip(x, -15, 15)
            y[...] = ( np.e ** -val ) / ( ( 1 + np.e ** -val) ** 2 ) 
     return matrix
+
 def hyperbolic_tangent_Deriv(input, predicted_index):
    matrix = np.zeros(input.shape)
    with np.nditer([input, matrix], op_flags=['readwrite']) as it:
@@ -79,6 +82,7 @@ def hyperbolic_tangent_Deriv(input, predicted_index):
            val  = np.clip(x, -15, 15)
            y[...] = 1 - (( np.e ** val - np.e ** -val) / ( np.e ** val + np.e ** -val) ) ** 2
    return matrix
+
 def softMax_Deriv(input, predicted_index):
     
     matrix = np.zeros( input.shape)

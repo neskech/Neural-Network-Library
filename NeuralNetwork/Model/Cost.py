@@ -6,15 +6,15 @@ class Cost(Enum):
     SQUARE_RESIDUALS = 0
     CROSS_ENTROPY = 1
 
-def SSR(X, Y, evaluate):
+def Square_Residuals(X, Y, evaluate):
      sum = 0
      for i in range( len(X) ):
             predicted = evaluate(X[i])
-            for j in range( predicted.shape[1] ):
+            for _ in range( predicted.shape[1] ):
                 sum += ( Y[i] - predicted ) ** 2
      return sum
 
-def SSR_Derivative(X, Y, data_index, output_values):
+def Square_Residuals_Derivative(X, Y, data_index, output_values):
     matrix = np.zeros( (len(output_values), 1), dtype=np.float64 )
     for a in range( len(output_values) ):
             matrix[a,0] = -2 * ( Y[data_index] - output_values[a,0] )
@@ -29,6 +29,7 @@ def Cross_Entropy(X, Y, evaluate):
            sum += -np.log(predicted[index])
        return sum
 
+#TODO WTF IS THIS 
 def Cross_Entropy_Derivative(X, Y, data_index, output_values):
        matrix = np.ones( (len(output_values), 1), dtype=np.float64 )
        return matrix
