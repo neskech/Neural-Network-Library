@@ -24,7 +24,7 @@ A neural network library made using python and numpy
       - Cross Entropy
 
  # Activation Functions
-    -
+   -
       - Relu
       - Sigmoid
       - Hyperbolic Tangent
