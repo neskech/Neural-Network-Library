@@ -20,7 +20,7 @@ net.add(DenseLayer(1, ACT_FUNC.NONE))
 
 net.set_hyper_params(learning_rate=0.006, batch_size=1, momentum=0.80, momentum2=0.80, epsillon=0.0000001)
 net.compile(Optomizer.ADAM, Cost.SQUARE_RESIDUALS, AccuracyTP.REGRESSION, debug=True, debug_patience=10)
-net.train(trainX, trainY, epochs=500)
+net.train(trainX, trainY, epochs=50)
 
 net.display_fit(trainX, trainY, 50, 2)
 

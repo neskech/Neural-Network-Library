@@ -11,6 +11,41 @@ class ACT_FUNC(Enum):
     SOFTMAX = 4
     NONE = 5
     
+def activation_to_str(act: ACT_FUNC) -> str:
+    l = ["Soft Plus", "Relu", "Sigmoid", "Tanh", "Softmax", "None"]
+    return l[act.value]
+
+def str_to_activation(act: str) -> ACT_FUNC:
+    match act:
+        case "Soft Plus":
+            return ACT_FUNC.SOFT_PLUS
+        case "Relu":
+            return ACT_FUNC.RELU
+        case "Sigmoid":
+            return ACT_FUNC.SIGMOID
+        case "Tanh":
+            return ACT_FUNC.TANH
+        case "Softmax":
+            return ACT_FUNC.SOFTMAX
+        case "None":
+            return ACT_FUNC.NONE
+
+def parse_tuple(string: str):
+    string = string[1:-1]
+    
+    tup = ()
+    
+    a = 0
+    while a < len(string):
+        start = a
+        while a < len(string) and string[a] != ',':
+            a += 1
+
+        tup += (int(string[start:a]),)
+        a += 2
+
+    return tup
+        
 
 #BASE CLASS
 class Layer:
@@ -35,6 +70,12 @@ class Layer:
         pass
     
     def back_process(self, inputs, inputs_two):
+        pass
+    
+    def save_str(self) -> str:
+        pass
+    
+    def load(self, str):
         pass
     
     def activate(self, inputs, predicted_index = -1, use_derivative : bool = False):

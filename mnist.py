@@ -29,6 +29,8 @@ net.train(trainX, trainY, epochs=5000)
 print(f'Training accuracy {net.accuracy(trainX, trainY)}')
 print(f'Test accuracy {net.accuracy(testX, testY)}')
 
+#net.save("./SaveModels/MnistBasic.txt") #Optionally saving the model (Already a saved one in /SavedModels)
+
 input("Click enter to display loss metrics...")
 net.display_loss_metrics()
 input("Click enter to display gradient metrics...")

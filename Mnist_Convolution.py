@@ -16,7 +16,7 @@ scaler = StandardScaler().fit(data)
 data = scaler.transform(data)
 
 #Reshaping to from column vector to multidimensional tensor
-data = data.reshape( (data.shape[0], 1, 8, 8))
+data = data.reshape((data.shape[0], 1, 8, 8))
 
 #Validation Split
 trainX, testX, trainY, testY = train_test_split(data,target, train_size= 0.80, random_state=16)
@@ -41,6 +41,8 @@ net.display_loss_metrics()
 input("Click enter to display gradient metrics...")
 net.display_gradient_magnitude_metrics()
 input("Click enter to see example runs of model performance in action...")
+
+net.save("./SaveModels/Mnist10Conv.txt")
 
 #Example Runs to See Model Performance in Action
 for i in range(len(testX)) :

@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import matplotlib.pyplot as py
 from enum import Enum
@@ -460,11 +461,6 @@ class Model:
              sum += self.cost_function(output, output_set)
 
         return np.sqrt(sum) / len(testY)
-    
-
-
-
-
 
 
     def Adam_Optomizer(self, X, Y):
@@ -665,7 +661,53 @@ class Model:
             if self.debug: mag += np.sum(np.square(changeK))
             
         return mag
-
+    
+    def save(self, path: str):
+        np.set_printoptions(threshold=sys.maxsize)
+        with open(path, 'w') as f:
+            for layer in self.layers:
+                string = layer.save_str()
+                f.write(string)
+        np.set_printoptions(threshold=False)
+     
+    def load(self, path: str):  
+        with open(path, 'r') as f:
+            lines = f.readlines()
+            
+            a = 0
+            while a < len(lines):
+                layer_type = lines[a][len("LayerType: "):].strip()
+                
+                layer: Layer = None
+                match layer_type:
+                    case "Dense":
+                        layer = DenseLayer(0)
+                    case "Convolution":
+                        layer = ConvolutionLayer(0)
+                    case "MaxPool":
+                        layer = MaxPoolLayer()
+                    case "AvgPool":
+                        layer = AvgPoolLayer()
+                    case "Flatten":
+                        layer = FlattenLayer()
+                    case _:
+                        raise Exception(f"ERROR! Layer type of \'{layer_type}\' is unknown!")
+                    
+                string = lines[a]
+                a += 1
+                while a < len(lines) and lines[a].find("LayerType") == -1:
+                    string += lines[a]
+                    a += 1
+                
+                #At the end of the file there will always be one bit of white space
+                #We can catch
+                if a == len(lines) and len(lines[a - 1].strip()) == 0:
+                    break
+                
+                layer.load(string)
+                self.layers.append(layer)
+                    
+            
 
 
 

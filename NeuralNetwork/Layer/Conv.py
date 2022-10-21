@@ -1,8 +1,8 @@
-from .Layer import Layer, ACT_FUNC
+from .Layer import Layer, ACT_FUNC, activation_to_str, parse_tuple, str_to_activation
 import numpy as np
 
 class ConvolutionLayer(Layer):
-     def __init__(self, num_kernels : int, func : ACT_FUNC, kernel_shape, input_shape : tuple[int,int,int] = None, 
+     def __init__(self, num_kernels : int, func : ACT_FUNC = ACT_FUNC.NONE, kernel_shape = None, input_shape : tuple[int,int,int] = None, 
                   stride : int = 1, ) -> None:    
         super().__init__(num_kernels, func)
         self.kernel_shape = kernel_shape
@@ -117,3 +117,88 @@ class ConvolutionLayer(Layer):
           self.output_shape = (self.size, int( (self.input_shape[1] - self.kernel_shape[1]) / self.stride + 1 ), int( (self.input_shape[2] - self.kernel_shape[2]) / self.stride + 1) )
           self.biases = np.zeros(shape = (self.size,1), dtype=np.float64)
         
+     def save_str(self) -> str:
+        string = ""
+        string += "LayerType: Convolution\n"
+        string += f"num kernels: {self.size}\n"
+        string += f"input shape: {self.input_shape}\n"
+        string += f"output shape: {self.output_shape}\n"
+        string += f"kernel shape: {self.kernel_shape}\n"
+        string += f"stride: {self.stride}\n"
+        act_name = activation_to_str(self.activation_func)
+        string += f"Activation Function: {act_name}\n"
+        
+        string += "kernels:\n" 
+        string += f"{self.kernels}\n"
+        string += "Biases:\n" 
+        string += f"{self.biases}\n"
+        
+        return string
+    
+     def load(self, str):
+        lines = str.split("\n")
+        #first line is layer name
+        self.size = int(lines[1][len("num kernels: "):])
+        self.input_shape = parse_tuple(lines[2][len("input shape: "):])
+        self.output_shape = parse_tuple(lines[3][len("output shape: "):])
+        self.kernel_shape = parse_tuple(lines[4][len("kenerl shape: "):])
+        self.stride = int(lines[5][len("stride: "):])
+        
+        self.kernels = np.zeros(shape = (self.size,) + self.kernel_shape, dtype=np.float64)
+        self.biases = np.zeros(shape = (self.size,1), dtype=np.float64)
+        
+        activation_str = lines[6][len("Activation Function: "):]  
+        self.activation_func = str_to_activation(activation_str)
+        self.setActivation(self.activation_func)
+        
+        assert(lines[7].find("kernels:") != -1)
+        
+        a = 8
+        b = 0
+        idx = 0 
+        #TODO come back to this
+        while lines[a].find("Biases") == -1:
+            
+            white_space = False
+            while lines[a].strip() == "":
+                a += 1
+                white_space = True
+                
+            if white_space:
+                idx += 1
+                b = 0
+                
+            while lines[a].find("[[") != -1:
+                lines[a] = lines[a][1:]
+            while lines[a].find("]]") != -1:
+                lines[a] = lines[a][:-1]
+                
+            lines[a] = (lines[a].strip()[1:-1]).strip()
+            
+            lines[a] = lines[a].split(" ")
+            while "" in lines[a]:
+                idx_ = lines[a].index("")
+                lines[a] = lines[a][:idx_] + lines[a][idx_ + 1:]
+            
+            for piece in lines[a]:
+                r = (b) // self.kernel_shape[2] #cols
+                c = (b) % self.kernel_shape[2]
+                self.kernels[idx, 0, r, c] = float(piece)
+                b += 1
+   
+            a += 1
+            
+        assert(lines[a].find("Biases:") != -1)
+        
+        a += 1
+        shift = a    
+        while a < len(lines) and len(lines[a].strip()) != 0:
+            while lines[a].find("[[") != -1:
+                lines[a] = lines[a][1:]
+            while lines[a].find("]]") != -1:
+                lines[a] = lines[a][:-1]
+                
+            lines[a] = (lines[a].strip()[1:-1]).strip()
+            
+            self.biases[a - shift, 0] = float(lines[a])
+            a += 1
